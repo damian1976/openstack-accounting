@@ -456,6 +456,10 @@ if __name__ == '__main__':
                 company.gbh = float(company_section['gbh'])
     except KeyError as err:
         print("{0} is not defined for 'Company' section".format(err))
+        os._exit(1)
+    except Config.NoSectionError as ce:
+        print("Config file error: {0}".format(ce))
+        os._exit(1)
     projects = (x for x in config.sections() if x not in 'Company')
     print("Company: '{0}':".format(company.name))
     print("Period: '{0}' - '{1}'".format(start_time, end_time))
