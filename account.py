@@ -542,22 +542,25 @@ if __name__ == '__main__':
                     #dir(data)
                     if (s.state == 'active'):
                         actions = nova.instance_action.list(server=s.id)
-                        actions = list(reversed(actions))
-                        actions = filterAcionsByDateTime(actions,
-                                                         start_time=start_time,
-                                                         end_time=end_time)
-                        stop_timeframes, shelve_timeframes =\
-                            getStopStartTimeFrames(actions)
-                        #pp.pprint(stop_timeframes)
-                        #pp.pprint(shelve_timeframes)
-                        if ((stop_timeframes is not None) or
-                           (shelve_timeframes is not None)):
-                            s.updateHoursAndVolumes(stop_timeframes,
-                                                    shelve_timeframes,
-                                                    company.stop_coeff,
-                                                    company.shelve_coeff,
-                                                    float(server['local_gb']),
-                                                    float(server['vcpus']))
+                        if (actions is not None):
+                            actions = list(reversed(actions))
+                            actions = filterAcionsByDateTime(
+                                actions,
+                                start_time=start_time,
+                                end_time=end_time)
+                            stop_timeframes, shelve_timeframes =\
+                                getStopStartTimeFrames(actions)
+                            #pp.pprint(stop_timeframes)
+                            #pp.pprint(shelve_timeframes)
+                            if ((stop_timeframes is not None) or
+                               (shelve_timeframes is not None)):
+                                s.updateHoursAndVolumes(
+                                    stop_timeframes,
+                                    shelve_timeframes,
+                                    company.stop_coeff,
+                                    company.shelve_coeff,
+                                    float(server['local_gb']),
+                                    float(server['vcpus']))
                     s.gb_cost = s.gb*gbh
                     s.gb_cost_updated = s.gb_updated*gbh
                     s.vcpu_cost = s.vcpus*vcpuh
