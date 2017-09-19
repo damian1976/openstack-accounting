@@ -368,16 +368,24 @@ if __name__ == '__main__':
         username = args.username
     else:
         message = ('Unable to get user name')
-        username = os.environ['OS_USERNAME']
-        if (username is ''):
-                raise parser.error(message)
+        try:
+            username = os.environ['OS_USERNAME']
+            if (username is ''):
+                    raise parser.error(message)
+        except KeyError:
+            print("Unable to get user name with OS_USERNAME env variable")
+            os._exit(1)
     if (args.passwd):
         password = args.passwd
     else:
         message = ('Unable to get user password')
-        password = os.environ['OS_PASSWORD']
-        if (password is ''):
-            raise parser.error(message)
+        try:
+            password = os.environ['OS_PASSWORD']
+            if (password is ''):
+                raise parser.error(message)
+        except KeyError:
+            print("Unable to get user pasword with OS_PASSWORD env variable")
+            os._exit(1)
     if (args.start_time):
         #validate date
         message = ('Unable to validate start date')
