@@ -478,7 +478,7 @@ if __name__ == '__main__':
             ksdata = ksclient.tenants.list()
             dir(ksdata)
             tenants = dict((x.name, x.id) for x in ksdata)
-            pp.pprint(tenants)
+            #pp.pprint(tenants)
             if tenants is None:
                 raise ValueError
             project_id = tenants[project_name]
