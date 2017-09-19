@@ -542,7 +542,7 @@ if __name__ == '__main__':
                     company.vcpus_updated += s.vcpus_updated
                     company.gb_cost_updated += s.gb_cost_updated
                     company.vcpu_cost_updated += s.vcpu_cost_updated
-            if (data.server_usages is not None):
+            if hasattr(data, 'server_usages'):
                 hrs = float(data.total_hours)
                 gb = float(data.total_local_gb_usage)
                 ram = float(data.total_memory_mb_usage)
