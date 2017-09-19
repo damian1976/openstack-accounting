@@ -360,7 +360,7 @@ if __name__ == '__main__':
     details = False
     if (args.config_file):
         config = Config.ConfigParser()
-        config.read("config.ini")
+        config.read(args.config_file)
     else:
         message = ('Unable to read config file')
         raise parser.error(message)
@@ -428,7 +428,7 @@ if __name__ == '__main__':
         raise parser.error(message)
     if (args.feature):
         details = True
-    #pp = pprint.PrettyPrinter(indent=4)
+    pp = pprint.PrettyPrinter(indent=4)
     project_id = ''
     tenants = None
     company = None
@@ -478,6 +478,7 @@ if __name__ == '__main__':
             ksdata = ksclient.tenants.list()
             dir(ksdata)
             tenants = dict((x.name, x.id) for x in ksdata)
+            pp.pprint(tenants)
             if tenants is None:
                 raise ValueError
             project_id = tenants[project_name]
@@ -496,6 +497,22 @@ if __name__ == '__main__':
             pp = pprint.PrettyPrinter(indent=4)
             #pp.pprint(data.__dict__)
             dir(data)
+        except KeyError as ke:
+            print("Project {0} unavailable for given username".
+                  format(ke))
+            os._exit(1)
+        except ValueError as ve:
+            print("Error when parsing projects for given username: {1}".
+                  format(ve))
+            os._exit(1)
+        except AuthorizationFailure as auf:
+            print("Error for {0} auth: {1}".format(username, auf.message))
+            os._exit(1)
+        except Unauthorized as unauth:
+            print("Error for {0} auth: {1}"
+                  .format(username, unauth.message))
+            os._exit(1)
+        try:
             if (details):
                 for server in data.server_usages:
                     s_name = server['name']
@@ -555,19 +572,7 @@ if __name__ == '__main__':
             company.vcpu_cost += cpu*vcpuh
             company.gb_cost += gb*gbh
             #ram skipped
-        except client.exceptions.Unauthorized as err:
-            print("Error for {0} auth: {1}".format(username, err))
-            os._exit(1)
-        except ValueError as ve:
-            print("Error when parsing projects for given username: {1}".
-                  format(ve))
-            os._exit(1)
-        except AuthorizationFailure as auf:
-            print("Error for {0} auth: {1}".format(username, auf.message))
-            os._exit(1)
-        except Unauthorized as unauth:
-            print("Error for {0} auth: {1}"
-                  .format(username, unauth.message))
+        except:
             os._exit(1)
     print("Aggregation:")
     print("\tTotal Hours: {0:.2f}".format(company.hrs))
