@@ -506,7 +506,6 @@ if __name__ == '__main__':
             data = nova.usage.get(tenant_id=project_id,
                                   start=start_time,
                                   end=end_time)
-            pp = pprint.PrettyPrinter(indent=4)
             #pp.pprint(data.__dict__)
             dir(data)
         except KeyError as ke:
@@ -514,7 +513,7 @@ if __name__ == '__main__':
                   format(ke))
             os._exit(1)
         except ValueError as ve:
-            print("Error when parsing projects for given username: {1}".
+            print("Error parsing projects for given username: {1}".
                   format(ve))
             os._exit(1)
         except AuthorizationFailure as auf:
