@@ -75,7 +75,7 @@ class Server(object):
         if (stop_timeframes is not None):
             if (self.hrs_updated > 0):
                 for hours in stop_timeframes:
-                    self.hrs_updated -= hours
+                    self.hrs_updated -= hours*(1.0 - stop_coeff)
                     self.vcpus_updated -=\
                         local_vcpus*hours*(1.0 - stop_coeff)
                     self.gb_updated -=\
@@ -83,7 +83,7 @@ class Server(object):
         if (shelve_timeframes is not None):
             if (self.hrs_updated > 0):
                 for hours in shelve_timeframes:
-                    self.hrs_updated -= hours
+                    self.hrs_updated -= hours*(1.0 - shelve_coeff)
                     self.vcpus_updated -=\
                         local_vcpus*hours*(1.0 - shelve_coeff)
                     self.gb_updated -=\
