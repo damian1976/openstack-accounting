@@ -586,7 +586,12 @@ if __name__ == '__main__':
             company.vcpu_cost += cpu*vcpuh
             company.gb_cost += gb*gbh
             #ram skipped
+        except KeyError as ke:
+            print("Server doesn't contain {0} attribute".
+                  format(ke))
+            os._exit(1)
         except:
+            print("Unexpected error while parsing server data")
             os._exit(1)
     print("Aggregation:")
     print("\tTotal Hours: {0:.2f}".format(company.hrs))
