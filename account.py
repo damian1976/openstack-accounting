@@ -72,7 +72,7 @@ class Server(object):
         self.hrs_updated = self.hrs
         self.gb_updated = self.gb
         self.vcpus_updated = self.vcpus
-        if (stop_timeframes is not None):
+        if stop_timeframes:
             if (self.hrs_updated > 0):
                 for hours in stop_timeframes:
                     self.hrs_updated -= hours*(1.0 - stop_coeff)
@@ -80,7 +80,7 @@ class Server(object):
                         local_vcpus*hours*(1.0 - stop_coeff)
                     self.gb_updated -=\
                         local_gb*hours*(1.0 - stop_coeff)
-        if (shelve_timeframes is not None):
+        if shelve_timeframes:
             if (self.hrs_updated > 0):
                 for hours in shelve_timeframes:
                     self.hrs_updated -= hours*(1.0 - shelve_coeff)
@@ -542,7 +542,7 @@ if __name__ == '__main__':
                     #dir(data)
                     if (s.state == 'active'):
                         actions = nova.instance_action.list(server=s.id)
-                        if (actions is not None):
+                        if actions:
                             actions = list(reversed(actions))
                             actions = filterAcionsByDateTime(
                                 actions,
@@ -552,8 +552,8 @@ if __name__ == '__main__':
                                 getStopStartTimeFrames(actions)
                             #pp.pprint(stop_timeframes)
                             #pp.pprint(shelve_timeframes)
-                            if ((stop_timeframes is not None) or
-                               (shelve_timeframes is not None)):
+                            if (stop_timeframes or
+                               shelve_timeframes):
                                 s.updateHoursAndVolumes(
                                     stop_timeframes,
                                     shelve_timeframes,
