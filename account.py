@@ -25,42 +25,33 @@ class Server(object):
         self.name = name
         self.id = ''
         self.hrs = 0.0
-        self.hrs_updated = 0.0
         #self.ram = 0.0
         self.vcpus = 0.0
         self.vcpus_updated = 0.0
         self.vcpu_cost = 0.0
         self.vcpu_cost_updated = 0.0
         self.gb = 0.0
-        self.gb_updated = 0.0
         self.gb_cost = 0.0
-        self.gb_cost_updated = 0.0
         self.state = 'active'
 
     def __str__(self):
         str = "Server name: {0} ({1})\n" \
               "\tHours: {2:.2f}\n" \
-              "\tHours updated: {3:.2f}\n" \
-              "\tCPU Hours: {4:.2f}\n" \
-              "\tCPU Hours updated: {5:.2f}\n" \
-              "\tCPU Hours cost: {6:.2f}\n" \
-              "\tCPU Hours cost updated: {7:.2f}\n" \
-              "\tDisk GB-Hours: {8:.2f}\n" \
-              "\tDisk GB-Hours updated: {9:.2f}\n" \
-              "\tDisk GB-Hours cost: {10:.2f}\n" \
-              "\tDisk GB-Hours cost updated: {11:.2f}"
+              "\tCPU Hours: {3:.2f}\n" \
+              "\tCPU Hours updated: {4:.2f}\n" \
+              "\tCPU Hours cost: {5:.2f}\n" \
+              "\tCPU Hours cost updated: {6:.2f}\n" \
+              "\tDisk GB-Hours: {7:.2f}\n" \
+              "\tDisk GB-Hours cost: {8:.2f}\n"
         return str.format(self.name,
                           self.id,
                           self.hrs,
-                          self.hrs_updated,
                           self.vcpus,
                           self.vcpus_updated,
                           self.vcpu_cost,
                           self.vcpu_cost_updated,
                           self.gb,
-                          self.gb_updated,
-                          self.gb_cost,
-                          self.gb_cost_updated)
+                          self.gb_cost)
 
     def updateHoursAndVolumes(self,
                               stop_timeframes,
@@ -69,25 +60,15 @@ class Server(object):
                               shelve_coeff,
                               local_gb,
                               local_vcpus):
-        self.hrs_updated = self.hrs
-        self.gb_updated = self.gb
         self.vcpus_updated = self.vcpus
         if stop_timeframes:
-            if (self.hrs_updated > 0):
-                for hours in stop_timeframes:
-                    self.hrs_updated -= hours*(1.0 - stop_coeff)
-                    self.vcpus_updated -=\
-                        local_vcpus*hours*(1.0 - stop_coeff)
-                    self.gb_updated -=\
-                        local_gb*hours*(1.0 - stop_coeff)
+            for hours in stop_timeframes:
+                self.vcpus_updated -=\
+                    local_vcpus*hours*(1.0 - stop_coeff)
         if shelve_timeframes:
-            if (self.hrs_updated > 0):
-                for hours in shelve_timeframes:
-                    self.hrs_updated -= hours*(1.0 - shelve_coeff)
-                    self.vcpus_updated -=\
-                        local_vcpus*hours*(1.0 - shelve_coeff)
-                    self.gb_updated -=\
-                        local_gb*hours*(1.0 - shelve_coeff)
+            for hours in shelve_timeframes:
+                self.vcpus_updated -=\
+                    local_vcpus*hours*(1.0 - shelve_coeff)
 
 
 class Company(object):
@@ -95,7 +76,6 @@ class Company(object):
         self.name = name
         self.url = ''
         self.hrs = 0.0
-        self.hrs_updated = 0.0
         #self.ram = 0.0
         self.vcpus = 0.0
         self.vcpus_updated = 0.0
@@ -103,10 +83,8 @@ class Company(object):
         self.vcpu_cost = 0.0
         self.vcpu_cost_updated = 0.0
         self.gb = 0.0
-        self.gb_updated = 0.0
         self.gbh = 0.0
         self.gb_cost = 0.0
-        self.gb_cost_updated = 0.0
         self.shelve_coeff = 0.0
         self.stop_coeff = 0.0
         self.server = []
@@ -117,15 +95,12 @@ class Company(object):
                           'Start date',
                           'End date',
                           'Total hours',
-                          'Total hours updated',
                           'CPU Hours',
                           'CPU Hours updated',
                           'CPU Hours cost',
                           'CPU Hours cost updated',
                           'Disk GB-Hours',
-                          'Disk GB-Hours updated',
-                          'Disk GB-Hours cost',
-                          'Disk GB-Hours cost updated']
+                          'Disk GB-Hours cost']
             writer = csv.DictWriter(csvfile,
                                     fieldnames=fieldnames,
                                     delimiter=';')
@@ -137,31 +112,22 @@ class Company(object):
                              str(round(self.hrs, 2)).
                              replace('.', ','),
                              fieldnames[4]:
-                             str(round(self.hrs_updated, 2)).
-                             replace('.', ','),
-                             fieldnames[5]:
                              str(round(self.vcpus, 2)).
                              replace('.', ','),
-                             fieldnames[6]:
+                             fieldnames[5]:
                              str(round(self.vcpus_updated, 2)).
                              replace('.', ','),
-                             fieldnames[7]:
+                             fieldnames[6]:
                              str(round(self.vcpu_cost, 2)).
                              replace('.', ','),
-                             fieldnames[8]:
+                             fieldnames[7]:
                              str(round(self.vcpu_cost_updated, 2)).
                              replace('.', ','),
-                             fieldnames[9]:
+                             fieldnames[8]:
                              str(round(self.gb, 2)).
                              replace('.', ','),
-                             fieldnames[10]:
-                             str(round(self.gb_updated, 2)).
-                             replace('.', ','),
-                             fieldnames[11]:
+                             fieldnames[9]:
                              str(round(self.gb_cost, 2)).
-                             replace('.', ','),
-                             fieldnames[12]:
-                             str(round(self.gb_cost_updated, 2)).
                              replace('.', ',')})
         if details:
             with open(filename, 'a') as csvfile:
@@ -169,15 +135,12 @@ class Company(object):
                               'Start date',
                               'End date',
                               'Hours',
-                              'Hours updated',
                               'CPU Hours',
                               'CPU Hours updated',
                               'CPU Hours cost',
                               'CPU Hours cost updated',
                               'Disk GB-Hours',
-                              'Disk GB-Hours updated',
-                              'Disk GB-Hours cost',
-                              'Disk GB-Hours cost updated']
+                              'Disk GB-Hours cost']
                 writer = csv.DictWriter(csvfile,
                                         fieldnames=fieldnames,
                                         delimiter=';')
@@ -190,31 +153,22 @@ class Company(object):
                                     fieldnames[2]: end_time,
                                     fieldnames[3]: str(round(server.hrs, 2)).
                                     replace('.', ','),
-                                    fieldnames[4]:
-                                    str(round(server.hrs_updated, 2)).
+                                    fieldnames[4]: str(round(server.vcpus, 2)).
                                     replace('.', ','),
-                                    fieldnames[5]: str(round(server.vcpus, 2)).
-                                    replace('.', ','),
-                                    fieldnames[6]:
+                                    fieldnames[5]:
                                     str(round(server.vcpus_updated, 2)).
                                     replace('.', ','),
-                                    fieldnames[7]: str(round(
+                                    fieldnames[6]: str(round(
                                         server.vcpu_cost, 2)).
                                     replace('.', ','),
-                                    fieldnames[8]: str(round(
+                                    fieldnames[7]: str(round(
                                         server.vcpu_cost_updated, 2)).
                                     replace('.', ','),
-                                    fieldnames[9]: str(round(
+                                    fieldnames[8]: str(round(
                                         server.gb, 2)).
                                     replace('.', ','),
-                                    fieldnames[10]: str(round(
-                                        server.gb_updated, 2)).
-                                    replace('.', ','),
-                                    fieldnames[11]: str(round(
+                                    fieldnames[9]: str(round(
                                         server.gb_cost, 2)).
-                                    replace('.', ','),
-                                    fieldnames[12]: str(round(
-                                        server.gb_cost_updated, 2)).
                                     replace('.', ',')})
 
 
@@ -524,55 +478,49 @@ if __name__ == '__main__':
                   .format(username, unauth.message))
             os._exit(1)
         try:
-            if (details):
-                for server in data.server_usages:
-                    s_name = server['name']
-                    s = Server(s_name)
-                    s.id = server['instance_id']
-                    s.state = server['state']
-                    #s.hrs_updated = s.hrs = float(server['hours'])
-                    #s.gb_updated = s.gb = float(server['local_gb'])*s.hrs
-                    #s.vcpus_updated = s.vcpus = float(server['vcpus'])*s.hrs
-                    s.hrs = float(server['hours'])
-                    s.gb = float(server['local_gb'])*s.hrs
-                    s.vcpus = float(server['vcpus'])*s.hrs
-                    s.hrs_updated = s.hrs
-                    s.gb_updated = s.gb
-                    s.vcpus_updated = s.vcpus
-                    #dir(data)
-                    if (s.state == 'active'):
-                        actions = nova.instance_action.list(server=s.id)
-                        if actions:
-                            actions = list(reversed(actions))
-                            actions = filterAcionsByDateTime(
-                                actions,
-                                start_time=start_time,
-                                end_time=end_time)
-                            stop_timeframes, shelve_timeframes =\
-                                getStopStartTimeFrames(actions)
-                            #pp.pprint(stop_timeframes)
-                            #pp.pprint(shelve_timeframes)
-                            if (stop_timeframes or
-                               shelve_timeframes):
-                                s.updateHoursAndVolumes(
-                                    stop_timeframes,
-                                    shelve_timeframes,
-                                    company.stop_coeff,
-                                    company.shelve_coeff,
-                                    float(server['local_gb']),
-                                    float(server['vcpus']))
-                    s.gb_cost = s.gb*gbh
-                    s.gb_cost_updated = s.gb_updated*gbh
-                    s.vcpu_cost = s.vcpus*vcpuh
-                    s.vcpu_cost_updated = s.vcpus_updated*vcpuh
+            for server in data.server_usages:
+                s_name = server['name']
+                s = Server(s_name)
+                s.id = server['instance_id']
+                s.state = server['state']
+                #s.hrs_updated = s.hrs = float(server['hours'])
+                #s.gb_updated = s.gb = float(server['local_gb'])*s.hrs
+                #s.vcpus_updated = s.vcpus = float(server['vcpus'])*s.hrs
+                s.hrs = float(server['hours'])
+                s.gb = float(server['local_gb'])*s.hrs
+                s.vcpus = float(server['vcpus'])*s.hrs
+                s.vcpus_updated = s.vcpus
+                #dir(data)
+                if (s.state == 'active'):
+                    actions = nova.instance_action.list(server=s.id)
+                    if actions:
+                        actions = list(reversed(actions))
+                        actions = filterAcionsByDateTime(
+                            actions,
+                            start_time=start_time,
+                            end_time=end_time)
+                        stop_timeframes, shelve_timeframes =\
+                            getStopStartTimeFrames(actions)
+                        #pp.pprint(stop_timeframes)
+                        #pp.pprint(shelve_timeframes)
+                        if (stop_timeframes or
+                           shelve_timeframes):
+                            s.updateHoursAndVolumes(
+                                stop_timeframes,
+                                shelve_timeframes,
+                                company.stop_coeff,
+                                company.shelve_coeff,
+                                float(server['local_gb']),
+                                float(server['vcpus']))
+                s.gb_cost = s.gb*gbh
+                s.vcpu_cost = s.vcpus*vcpuh
+                s.vcpu_cost_updated = s.vcpus_updated*vcpuh
+                if details:
                     print(s)
-                    #pp.pprint(server)
-                    company.server.append(s)
-                    company.hrs_updated += s.hrs_updated
-                    company.gb_updated += s.gb_updated
-                    company.vcpus_updated += s.vcpus_updated
-                    company.gb_cost_updated += s.gb_cost_updated
-                    company.vcpu_cost_updated += s.vcpu_cost_updated
+                #pp.pprint(server)
+                company.server.append(s)
+                company.vcpus_updated += s.vcpus_updated
+                company.vcpu_cost_updated += s.vcpu_cost_updated
             if hasattr(data, 'server_usages'):
                 hrs = float(data.total_hours)
                 gb = float(data.total_local_gb_usage)
@@ -595,17 +543,13 @@ if __name__ == '__main__':
             os._exit(1)
     print("Aggregation:")
     print("\tTotal Hours: {0:.2f}".format(company.hrs))
-    print("\tTotal Hours Updated: {0:.2f}".format(company.hrs_updated))
     print("\tCPU Hours: {0:.2f}".format(company.vcpus))
-    print("\tCPU Hours Updated: {0:.2f}".format(company.vcpus_updated))
-    print("\tDisk GB-Hours: {0:.2f}".format(company.gb))
-    print("\tDisk GB-Hours Updated: {0:.2f}".format(company.gb_updated))
+    print("\tCPU Hours updated: {0:.2f}".format(company.vcpus_updated))
     print("\tCPU Hours cost: {0:.2f}".format(company.vcpu_cost))
     print("\tCPU Hours cost updated: {0:.2f}".
           format(company.vcpu_cost_updated))
+    print("\tDisk GB-Hours: {0:.2f}".format(company.gb))
     print("\tDisk GB-Hours cost: {0:.2f}".format(company.gb_cost))
-    print("\tDisk GB-Hours cost updated: {0:.2f}".
-          format(company.gb_cost_updated))
     if save:
         print("Saving to {0}".format(out_file))
         company.saveCSV(out_file, start_time, end_time, details)
