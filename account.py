@@ -9,6 +9,7 @@ import datetime
 import calendar
 from oslo_utils import timeutils
 from dateutil.relativedelta import relativedelta
+#from dateutil import tz
 import dateutil.parser as dup
 import argparse
 import configparser as Config
@@ -20,71 +21,89 @@ import csv
 __author__ = 'Damian Kaliszan'
 
 
-class Server(object):
+class AccountData(object):
+    def __init__(self):
+        self.hrs = 0.0
+        self.ram = 0.0
+        self.ram_hrs = 0.0
+        self.ram_cost = 0.0
+        self.vcpus = 0.0
+        self.vcpus_hrs = 0.0
+        self.vcpu_cost = 0.0
+        self.gb = 0.0
+        self.gb_hrs = 0.0
+        self.gb_cost = 0.0
+        self.total_cost = 0.0
+
+
+class Server(AccountData):
     def __init__(self, name):
+        AccountData.__init__(self)
         self.name = name
         self.id = ''
-        self.hrs = 0.0
-        #self.ram = 0.0
-        self.vcpus = 0.0
-        self.vcpus_updated = 0.0
-        self.vcpu_cost = 0.0
-        self.vcpu_cost_updated = 0.0
-        self.gb = 0.0
-        self.gb_cost = 0.0
         self.state = 'active'
 
     def __str__(self):
         str = "Server name: {0} ({1})\n" \
               "\tHours: {2:.2f}\n" \
               "\tCPU Hours: {3:.2f}\n" \
-              "\tCPU Hours updated: {4:.2f}\n" \
-              "\tCPU Hours cost: {5:.2f}\n" \
-              "\tCPU Hours cost updated: {6:.2f}\n" \
+              "\tCPU Hours cost: {4:.2f}\n" \
+              "\tRAM GB-Hours: {5:.2f}\n" \
+              "\tRAM GB-Hours cost: {6:.2f}\n" \
               "\tDisk GB-Hours: {7:.2f}\n" \
-              "\tDisk GB-Hours cost: {8:.2f}\n"
+              "\tDisk GB-Hours cost: {8:.2f}\n" \
+              "\tServer total cost: {9:.2f}\n"
         return str.format(self.name,
                           self.id,
                           self.hrs,
-                          self.vcpus,
-                          self.vcpus_updated,
+                          self.vcpus_hrs,
                           self.vcpu_cost,
-                          self.vcpu_cost_updated,
-                          self.gb,
-                          self.gb_cost)
+                          self.ram_hrs,
+                          self.ram_cost,
+                          self.gb_hrs,
+                          self.gb_cost,
+                          self.totalCost())
 
     def updateHoursAndVolumes(self,
                               stop_timeframes,
                               shelve_timeframes,
                               stop_coeff,
-                              shelve_coeff,
-                              local_gb,
-                              local_vcpus):
-        self.vcpus_updated = self.vcpus
+                              shelve_coeff):
         if stop_timeframes:
             for hours in stop_timeframes:
-                self.vcpus_updated -=\
-                    local_vcpus*hours*(1.0 - stop_coeff)
+                self.hrs -= hours
+                self.vcpus_hrs -=\
+                    self.vcpus*hours*(1.0 - stop_coeff)
+                self.ram_hrs -=\
+                    self.ram*hours*(1.0 - stop_coeff)
+            if (self.hrs == 0.0):
+                self.vcpus_hrs = self.ram_hrs = self.gb_hrs = 0.0
         if shelve_timeframes:
             for hours in shelve_timeframes:
-                self.vcpus_updated -=\
-                    local_vcpus*hours*(1.0 - shelve_coeff)
+                self.hrs -= hours
+                self.vcpus_hrs -=\
+                    self.vcpus*hours*(1.0 - shelve_coeff)
+                self.ram_hrs -=\
+                    self.ram*hours*(1.0 - shelve_coeff)
+            if (self.hrs == 0.0):
+                self.vcpus_hrs = self.ram_hrs = self.gb_hrs = 0.0
+
+    def totalCost(self):
+        try:
+            self.total_cost = max(self.vcpu_cost,
+                                  self.ram_cost) +\
+                self.gb_cost
+        except Exception as e:
+            print("Error {0}".format(e))
+            return 0.0
+        return self.total_cost
 
 
 class Company(object):
     def __init__(self, name):
+        AccountData.__init__(self)
         self.name = name
         self.url = ''
-        self.hrs = 0.0
-        #self.ram = 0.0
-        self.vcpus = 0.0
-        self.vcpus_updated = 0.0
-        self.vcpuh = 0.0
-        self.vcpu_cost = 0.0
-        self.vcpu_cost_updated = 0.0
-        self.gb = 0.0
-        self.gbh = 0.0
-        self.gb_cost = 0.0
         self.shelve_coeff = 0.0
         self.stop_coeff = 0.0
         self.server = []
@@ -95,12 +114,13 @@ class Company(object):
                           'Start date',
                           'End date',
                           'Total hours',
-                          'CPU Hours',
-                          'CPU Hours updated',
-                          'CPU Hours cost',
-                          'CPU Hours cost updated',
+                          'CPU-Hours',
+                          'CPU-Hours cost',
+                          "RAM GB-Hours",
+                          "RAM GB-Hours cost",
                           'Disk GB-Hours',
-                          'Disk GB-Hours cost']
+                          'Disk GB-Hours cost',
+                          'Total cost']
             writer = csv.DictWriter(csvfile,
                                     fieldnames=fieldnames,
                                     delimiter=';')
@@ -112,22 +132,25 @@ class Company(object):
                              str(round(self.hrs, 2)).
                              replace('.', ','),
                              fieldnames[4]:
-                             str(round(self.vcpus, 2)).
+                             str(round(self.vcpus_hrs, 2)).
                              replace('.', ','),
                              fieldnames[5]:
-                             str(round(self.vcpus_updated, 2)).
-                             replace('.', ','),
-                             fieldnames[6]:
                              str(round(self.vcpu_cost, 2)).
                              replace('.', ','),
+                             fieldnames[6]:
+                             str(round(self.ram_hrs, 2)).
+                             replace('.', ','),
                              fieldnames[7]:
-                             str(round(self.vcpu_cost_updated, 2)).
+                             str(round(self.ram_cost, 2)).
                              replace('.', ','),
                              fieldnames[8]:
-                             str(round(self.gb, 2)).
+                             str(round(self.gb_hrs, 2)).
                              replace('.', ','),
                              fieldnames[9]:
                              str(round(self.gb_cost, 2)).
+                             replace('.', ','),
+                             fieldnames[10]:
+                             str(round(self.total_cost, 2)).
                              replace('.', ',')})
         if details:
             with open(filename, 'a') as csvfile:
@@ -135,12 +158,13 @@ class Company(object):
                               'Start date',
                               'End date',
                               'Hours',
-                              'CPU Hours',
-                              'CPU Hours updated',
-                              'CPU Hours cost',
-                              'CPU Hours cost updated',
+                              'CPU-Hours',
+                              'CPU-Hours cost',
+                              'RAM GB-Hours',
+                              'RAM GB-Hours cost',
                               'Disk GB-Hours',
-                              'Disk GB-Hours cost']
+                              'Disk GB-Hours cost',
+                              'Total cost']
                 writer = csv.DictWriter(csvfile,
                                         fieldnames=fieldnames,
                                         delimiter=';')
@@ -153,22 +177,26 @@ class Company(object):
                                     fieldnames[2]: end_time,
                                     fieldnames[3]: str(round(server.hrs, 2)).
                                     replace('.', ','),
-                                    fieldnames[4]: str(round(server.vcpus, 2)).
+                                    fieldnames[4]:
+                                    str(round(server.vcpus_hrs, 2)).
                                     replace('.', ','),
-                                    fieldnames[5]:
-                                    str(round(server.vcpus_updated, 2)).
-                                    replace('.', ','),
-                                    fieldnames[6]: str(round(
+                                    fieldnames[5]: str(round(
                                         server.vcpu_cost, 2)).
                                     replace('.', ','),
+                                    fieldnames[6]:
+                                    str(round(server.ram_hrs, 2)).
+                                    replace('.', ','),
                                     fieldnames[7]: str(round(
-                                        server.vcpu_cost_updated, 2)).
+                                        server.ram_cost, 2)).
                                     replace('.', ','),
                                     fieldnames[8]: str(round(
-                                        server.gb, 2)).
+                                        server.gb_hrs, 2)).
                                     replace('.', ','),
                                     fieldnames[9]: str(round(
                                         server.gb_cost, 2)).
+                                    replace('.', ','),
+                                    fieldnames[10]: str(round(
+                                        server.totalCost(), 2)).
                                     replace('.', ',')})
 
 
@@ -181,47 +209,39 @@ def configSectionMap(section, config=None):
             if dict1[option] == -1:
                 print("skip: %s" % option)
         except:
-            print("exception on %s!" % option)
+            print("Exception on {0}!".format(option))
             dict1[option] = None
     return dict1
 
 
-def filterAcionsByDateTime(actions, start_time=None, end_time=None):
-    #print("{0} - {1}".format(start_time, end_time))
+def filterActionsByDateTime(actions, start_time=None, end_time=None):
     if actions:
         mydict = {'0': start_time, '1': end_time}
         for key, date in sorted(mydict.items()):
-            filtered_actions = []
-            for action, next_action in zip(actions, actions[1:]):
-                start_time_1 = dup.parse(str(action.start_time))
-                start_time_2 = dup.parse(str(next_action.start_time))
+            #actions = list(reversed(actions))
+            filtered_actions = actions
+            #pp.pprint(filtered_actions)
+            for i, item in enumerate(filtered_actions):
+                start_time = dup.parse(str(item.start_time))
                 if (key == '0' and date is not None):
-                    start_diff_1 = (start_time_1 - date).total_seconds()
-                    start_diff_2 = (start_time_2 - date).total_seconds()
-                    if (start_diff_1 > 0.0 and start_diff_2 > 0.0):
-                        #print("Dodaje 0 {0}".format(action.action))
-                        filtered_actions.append(action)
-                    elif (start_diff_1 < 0.0 and start_diff_2 > 0.0):
-                        action.start_time = start_time
-                        filtered_actions.append(action)
-                        #print("Dodaje 1 {0}".format(action.action))
+                    start_diff = (start_time - date).total_seconds()
+                    #print(start_diff)
+                    #find first time earlier than start_time
+                    if (start_diff < 0.0):
+                        filtered_actions[i].start_time = date
+                        filtered_actions = filtered_actions[0:i+1]
+                        break
                 elif (key == '1' and date is not None):
-                    end_diff_1 = (start_time_1 - date).total_seconds()
-                    end_diff_2 = (start_time_2 - date).total_seconds()
-                    if (end_diff_1 < 0.0 and end_diff_2 < 0.0):
-                        filtered_actions.append(action)
-                    elif (end_diff_1 < 0.0 and end_diff_2 > 0.0):
-                        next_action.start_time = end_time
-                        filtered_actions.append(action)
-                        #print("Dodaje 2 {0}".format(action.action))
-                        filtered_actions.append(next_action)
-                        #print("Dodaje 3 {0}".format(next_action.action))
-                        #return filtered_actions
-            actions = filtered_actions
+                    end_diff = (start_time - date).total_seconds()
+                    if (end_diff > 0.0):
+                        filtered_actions = filtered_actions[0:i]
+                        break
+            actions = list(reversed(filtered_actions))
+        return filtered_actions
     return actions
 
 
-def getStopStartTimeFrames(actions):
+def getStopStartTimeFrames(actions, period_end_time):
     states = {'stop': 'start',
               'shelve': 'unshelve'}
     stop_list = list(states.keys())
@@ -229,19 +249,23 @@ def getStopStartTimeFrames(actions):
     stop_action = None
     stop_timeframes = []
     shelve_timeframes = []
-    for saction in actions:
+    for i, saction in enumerate(actions):
         #print("{0}\t{1}".format(saction.action, saction.start_time))
         if (saction.action in stop_list and
            stop_action is None):
             stop_action = saction
         if (stop_action):
-            if (saction.action in start_list and stop_action and
+            if (saction.action in start_list and
                 states[stop_action.action] == saction.action and
                stop_action is not None):
                 #print("{0}\t{1}".format(stop_action.start_time,
                 #      saction.start_time))
-                start_time = timeutils.parse_isotime(stop_action.start_time)
-                end_time = timeutils.parse_isotime(saction.start_time)
+                #print("Odejmuje11")
+                #start_time = timeutils.parse_isotime(stop_action.start_time)
+                #end_time = timeutils.parse_isotime(saction.start_time)
+                start_time = dup.parse(str(stop_action.start_time))
+                end_time = dup.parse(str(saction.start_time))
+                #print("Odejmuje")
                 tdiff = (end_time - start_time).total_seconds() / 3600.0
                 #print(tdiff)
                 if (saction.action == 'start'):
@@ -249,6 +273,19 @@ def getStopStartTimeFrames(actions):
                 if (saction.action == 'unshelve'):
                     shelve_timeframes.append(tdiff)
                 stop_action = None
+            #just in case stop action is the last action in the list
+            elif (i == len(actions) - 1):
+                end_time = dup.parse(str(period_end_time))
+                start_time = dup.parse(str(stop_action.start_time))
+                #print("Odejmuje22 {0} {1}".format(end_time, start_time))
+                #start_time = timeutils.parse_isotime(stop_action.start_time)
+                #print("Odejmuje2")
+                tdiff = (end_time - start_time).total_seconds() / 3600.0
+                #print(tdiff)
+                if (stop_action.action == 'stop'):
+                    stop_timeframes.append(tdiff)
+                if (stop_action.action == 'shelve'):
+                    shelve_timeframes.append(tdiff)
     return stop_timeframes, shelve_timeframes
 
 if __name__ == '__main__':
@@ -386,7 +423,7 @@ if __name__ == '__main__':
         out_file = args.output_file
         save = True
     message = ('The start time cannot occur after the end time')
-    if (end_time < start_time):
+    if ((end_time - start_time).total_seconds() < 0):
         raise parser.error(message)
     if (args.feature):
         details = True
@@ -395,6 +432,21 @@ if __name__ == '__main__':
     tenants = None
     company = None
     company_name = ''
+    '''
+    utc_zone = tz.gettz('UTC')
+    local_zone = tz.tzlocal()
+    start_time = start_time.replace(tzinfo=local_zone)
+    start_time = start_time.astimezone(utc_zone)
+    end_time = end_time.replace(tzinfo=local_zone)
+    end_time = end_time.astimezone(utc_zone)
+    utc_start_string = start_time.strftime('%Y-%m-%d %H:%M:%S')
+    utc_end_string = end_time.strftime('%Y-%m-%d %H:%M:%S')
+    start_time = datetime.datetime.strptime(utc_start_string,
+                 '%Y-%m-%d %H:%M:%S')
+    end_time = datetime.datetime.strptime(utc_end_string, '%Y-%m-%d %H:%M:%S')
+    '''
+    time_delta = (end_time - start_time).total_seconds() / 3600.0
+    print("DELTA {0}".format(time_delta))
     try:
         company_section = configSectionMap('Company', config)
         company_name = company_section['name']
@@ -408,6 +460,8 @@ if __name__ == '__main__':
                 company.vcpuh = float(company_section['vcpuh'])
             if (key == 'gbh'):
                 company.gbh = float(company_section['gbh'])
+            if (key == 'ramh'):
+                company.ramh = float(company_section['ramh'])
     except KeyError as err:
         print("{0} is not defined for 'Company' section".format(err))
         os._exit(1)
@@ -418,24 +472,28 @@ if __name__ == '__main__':
     print("Company: '{0}':".format(company.name))
     print("Period: '{0}' - '{1}'".format(start_time, end_time))
     for proj in projects:
-        #print(company)
         #projects
         try:
             project = configSectionMap(proj, config)
             url = company.url
             vcpuh = company.vcpuh
             gbh = company.gbh
+            ramh = company.ramh
+            project_name = project['name']
             for key, value in project.items():
                 if (key == 'url'):
                     url = project['url']
-                if (key == 'name'):
-                    project_name = project['name']
+                #if (key == 'name'):
+                #    project_name = project['name']
                 if (key == 'vcpuh'):
                     vcpuh = float(project['vcpuh'])
                 if (key == 'gbh'):
                     gbh = float(project['gbh'])
+                if (key == 'ramh'):
+                    ramh = float(project['ramh'])
         except KeyError as err:
-            print("Unexpected error: {0}".format(err))
+            #print("Project {0} doesn't have {1} attribute".format(proj, err))
+            continue
         try:
             #get tenants for given user
             ksclient = ks.Client(username=username,
@@ -449,19 +507,16 @@ if __name__ == '__main__':
                 raise ValueError
             project_id = tenants[project_name]
             #auth with nova
-            version = '2'
+            VERSION = '2.40'
             loader = loading.get_plugin_loader('password')
             auth = loader.load_from_options(auth_url=url,
                                             username=username,
                                             password=password,
-                                            project_name=project_name)
+                                            project_id=project_id)
             sess = session.Session(auth=auth)
-            nova = client.Client(version, session=sess)
-            data = nova.usage.get(tenant_id=project_id,
-                                  start=start_time,
-                                  end=end_time)
-            #pp.pprint(data.__dict__)
-            dir(data)
+            nova = client.Client(VERSION, session=sess)
+            servers = nova.servers.list()
+            #pp.pprint(servers)
         except KeyError as ke:
             print("Project {0} unavailable for given username".
                   format(ke))
@@ -478,29 +533,37 @@ if __name__ == '__main__':
                   .format(username, unauth.message))
             os._exit(1)
         try:
-            for server in data.server_usages:
-                s_name = server['name']
-                s = Server(s_name)
-                s.id = server['instance_id']
-                s.state = server['state']
-                #s.hrs_updated = s.hrs = float(server['hours'])
-                #s.gb_updated = s.gb = float(server['local_gb'])*s.hrs
-                #s.vcpus_updated = s.vcpus = float(server['vcpus'])*s.hrs
-                s.hrs = float(server['hours'])
-                s.gb = float(server['local_gb'])*s.hrs
-                s.vcpus = float(server['vcpus'])*s.hrs
-                s.vcpus_updated = s.vcpus
-                #dir(data)
-                if (s.state == 'active'):
+            print("Number of servers: {0}".format(len(servers)))
+            for server in servers:
+                s = Server(server.name)
+                s.id = server.id
+                s.status = server.status
+                flavor = nova.flavors.get(server.flavor['id'])
+                if (s.status != 'terminated' and flavor):
+                    pp.pprint(flavor.__dict__)
+                    s.gb = float(flavor.disk)
+                    s.vcpus = float(flavor.vcpus)
+                    s.ram = float(flavor.ram) / 1024.0
                     actions = nova.instance_action.list(server=s.id)
+                    actions = filterActionsByDateTime(
+                        actions,
+                        start_time=start_time,
+                        end_time=end_time)
                     if actions:
-                        actions = list(reversed(actions))
-                        actions = filterAcionsByDateTime(
-                            actions,
-                            start_time=start_time,
-                            end_time=end_time)
+                        server_start = dup.parse(
+                            str(actions[0].start_time)
+                            )
+                        server_end = dup.parse(str(end_time))
+                        s.hrs = (
+                            server_end - server_start
+                            ).total_seconds() / 3600.0
+                        s.gb_hrs = s.gb*s.hrs
+                        s.vcpus_hrs = s.vcpus*s.hrs
+                        s.ram_hrs = s.ram*s.hrs
                         stop_timeframes, shelve_timeframes =\
-                            getStopStartTimeFrames(actions)
+                            getStopStartTimeFrames(actions,
+                                                   period_end_time=
+                                                   end_time)
                         #pp.pprint(stop_timeframes)
                         #pp.pprint(shelve_timeframes)
                         if (stop_timeframes or
@@ -509,47 +572,40 @@ if __name__ == '__main__':
                                 stop_timeframes,
                                 shelve_timeframes,
                                 company.stop_coeff,
-                                company.shelve_coeff,
-                                float(server['local_gb']),
-                                float(server['vcpus']))
-                s.gb_cost = s.gb*gbh
-                s.vcpu_cost = s.vcpus*vcpuh
-                s.vcpu_cost_updated = s.vcpus_updated*vcpuh
+                                company.shelve_coeff)
+                s.gb_cost = s.gb_hrs*gbh
+                s.vcpu_cost = s.vcpus_hrs*vcpuh
+                s.ram_cost = s.ram_hrs*ramh
                 if details:
                     print(s)
                 #pp.pprint(server)
                 company.server.append(s)
-                company.vcpus_updated += s.vcpus_updated
-                company.vcpu_cost_updated += s.vcpu_cost_updated
-            if hasattr(data, 'server_usages'):
-                hrs = float(data.total_hours)
-                gb = float(data.total_local_gb_usage)
-                ram = float(data.total_memory_mb_usage)
-                cpu = float(data.total_vcpus_usage)
-            else:
-                hrs = gb = ram = cpu = 0.0
-            company.hrs += hrs
-            company.gb += gb
-            company.vcpus += cpu
-            company.vcpu_cost += cpu*vcpuh
-            company.gb_cost += gb*gbh
-            #ram skipped
+                company.hrs += s.hrs
+                company.vcpus_hrs += s.vcpus_hrs
+                company.vcpu_cost += s.vcpu_cost
+                company.ram_hrs += s.ram_hrs
+                company.ram_cost += s.ram_cost
+                company.total_cost += s.totalCost()
+                company.gb_hrs += s.gb_hrs
+                company.gb_cost += s.gb_cost
         except KeyError as ke:
             print("Server doesn't contain {0} attribute".
                   format(ke))
             os._exit(1)
-        except:
-            print("Unexpected error while parsing server data")
+        except Exception as e:
+            print("Unexpected error: {0}".format(e))
             os._exit(1)
     print("Aggregation:")
     print("\tTotal Hours: {0:.2f}".format(company.hrs))
-    print("\tCPU Hours: {0:.2f}".format(company.vcpus))
-    print("\tCPU Hours updated: {0:.2f}".format(company.vcpus_updated))
-    print("\tCPU Hours cost: {0:.2f}".format(company.vcpu_cost))
-    print("\tCPU Hours cost updated: {0:.2f}".
-          format(company.vcpu_cost_updated))
-    print("\tDisk GB-Hours: {0:.2f}".format(company.gb))
+    print("\tCPU Hours: {0:.2f}".format(company.vcpus_hrs))
+    print("\tCPU Hours cost: {0:.2f}".
+          format(company.vcpu_cost))
+    print("\tRAM GB-Hours: {0:.2f}".format(company.ram_hrs))
+    print("\tRAM GB-Hours cost: {0:.2f}".
+          format(company.ram_cost))
+    print("\tDisk GB-Hours: {0:.2f}".format(company.gb_hrs))
     print("\tDisk GB-Hours cost: {0:.2f}".format(company.gb_cost))
+    print("\tTotal cost: {0:.2f}".format(company.total_cost))
     if save:
         print("Saving to {0}".format(out_file))
         company.saveCSV(out_file, start_time, end_time, details)
