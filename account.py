@@ -446,7 +446,7 @@ if __name__ == '__main__':
     end_time = datetime.datetime.strptime(utc_end_string, '%Y-%m-%d %H:%M:%S')
     '''
     time_delta = (end_time - start_time).total_seconds() / 3600.0
-    print("DELTA {0}".format(time_delta))
+    #print("DELTA {0}".format(time_delta))
     try:
         company_section = configSectionMap('Company', config)
         company_name = company_section['name']
@@ -539,8 +539,9 @@ if __name__ == '__main__':
                 s.id = server.id
                 s.status = server.status
                 flavor = nova.flavors.get(server.flavor['id'])
-                if (s.status != 'terminated' and flavor):
-                    pp.pprint(flavor.__dict__)
+                #if (s.status != 'terminated' and flavor):
+                if (flavor):
+                    #pp.pprint(flavor.__dict__)
                     s.gb = float(flavor.disk)
                     s.vcpus = float(flavor.vcpus)
                     s.ram = float(flavor.ram) / 1024.0
