@@ -554,7 +554,7 @@ if __name__ == '__main__':
                                  )
             servers = nova.servers.list()
             servers_deleted = nova.servers.list(
-                search_opts={'status': 'unknown'}
+                search_opts={'status': 'deleted'}
                 )
             #pp.pprint(servers_deleted)
             servers = servers + servers_deleted
