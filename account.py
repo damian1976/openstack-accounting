@@ -2,6 +2,10 @@
 import os
 import pprint
 from novaclient import client
+#from novaclient import extension
+#from novaclient.v2.contrib import instance_action
+#from keystoneclient.v2_0 import client as ks
+#from keystoneauth1.identity import v3
 from keystoneclient.v2_0 import client as ks
 from keystoneauth1 import loading
 from keystoneauth1 import session
@@ -9,14 +13,11 @@ import datetime
 import calendar
 from oslo_utils import timeutils
 from dateutil.relativedelta import relativedelta
-#from dateutil import tz
 import dateutil.parser as dup
 import argparse
 import configparser as Config
 from keystoneclient.exceptions import AuthorizationFailure, Unauthorized
 import csv
-#import requests.packages.urllib3
-#requests.packages.urllib3.disable_warnings()
 
 __author__ = 'Damian Kaliszan'
 
@@ -34,6 +35,9 @@ class AccountData(object):
         self.gb_hrs = 0.0
         self.gb_cost = 0.0
         self.total_cost = 0.0
+
+    def __repr__(self):
+        return "<AccountData>"
 
 
 class Server(AccountData):
@@ -67,8 +71,17 @@ class Server(AccountData):
     def updateHoursAndVolumes(self,
                               stop_timeframes,
                               shelve_timeframes,
+                              delete_timeframes,
                               stop_coeff,
                               shelve_coeff):
+        if delete_timeframes:
+            for hours in delete_timeframes:
+                self.hrs -= hours
+                self.gb_hrs -= self.gb*hours
+                self.vcpus_hrs -= self.vcpus*hours
+                self.ram_hrs -= self.ram*hours
+            if (self.hrs == 0.0):
+                self.vcpus_hrs = self.ram_hrs = self.gb_hrs = 0.0
         if stop_timeframes:
             for hours in stop_timeframes:
                 self.hrs -= hours
@@ -243,21 +256,34 @@ def filterActionsByDateTime(actions, start_time=None, end_time=None):
 
 def getStopStartTimeFrames(actions, period_end_time):
     states = {'stop': 'start',
-              'shelve': 'unshelve'}
+              'shelve': 'unshelve',
+              'delete': ''}
     stop_list = list(states.keys())
     start_list = list(states.values())
     stop_action = None
     stop_timeframes = []
     shelve_timeframes = []
+    delete_timeframes = []
     for i, saction in enumerate(actions):
-        #print("{0}\t{1}".format(saction.action, saction.start_time))
+        '''
+        if (saction.message):
+            print("if (saction.message) %s" % saction.action)
+        if not saction.message:
+            print("if (not saction.message) %s" % saction.action)
+        if (saction.message is None):
+            print("saction.message is None %s" % saction.action)
+        if (saction.message is not None):
+            print("saction.message is not None %s" % saction.action)
+        print("Message {0}".format(saction.message))
+        '''
+        #if successfull the message is empty
         if (saction.action in stop_list and
-           stop_action is None):
+           stop_action is None and not saction.message):
             stop_action = saction
         if (stop_action):
             if (saction.action in start_list and
                 states[stop_action.action] == saction.action and
-               stop_action is not None):
+               stop_action is not None and not saction.message):
                 #print("{0}\t{1}".format(stop_action.start_time,
                 #      saction.start_time))
                 #print("Odejmuje11")
@@ -282,11 +308,13 @@ def getStopStartTimeFrames(actions, period_end_time):
                 #print("Odejmuje2")
                 tdiff = (end_time - start_time).total_seconds() / 3600.0
                 #print(tdiff)
+                if (stop_action.action == 'delete'):
+                    delete_timeframes.append(tdiff)
                 if (stop_action.action == 'stop'):
                     stop_timeframes.append(tdiff)
                 if (stop_action.action == 'shelve'):
                     shelve_timeframes.append(tdiff)
-    return stop_timeframes, shelve_timeframes
+    return stop_timeframes, shelve_timeframes, delete_timeframes
 
 if __name__ == '__main__':
     # Instantiate the parser
@@ -507,16 +535,30 @@ if __name__ == '__main__':
                 raise ValueError
             project_id = tenants[project_name]
             #auth with nova
-            VERSION = '2.40'
+            VERSION = '2.21'
+            opts = loading.get_plugin_loader('password')
             loader = loading.get_plugin_loader('password')
             auth = loader.load_from_options(auth_url=url,
                                             username=username,
                                             password=password,
-                                            project_id=project_id)
+                                            project_id=project_id,
+                                            )
             sess = session.Session(auth=auth)
-            nova = client.Client(VERSION, session=sess)
+            nova = client.Client(VERSION,
+                                 session=sess,
+                                 )
+            servers_deleted = nova.servers.list(
+                search_opts={'status': 'deleted'}
+                )
             servers = nova.servers.list()
+            servers = servers + servers_deleted
             #pp.pprint(servers)
+            '''
+            data = nova.usage.get(tenant_id=project_id,
+                                  start=start_time,
+                                  end=end_time)
+            dir(data)
+            '''
         except KeyError as ke:
             print("Project {0} unavailable for given username".
                   format(ke))
@@ -526,7 +568,7 @@ if __name__ == '__main__':
                   format(ve))
             os._exit(1)
         except AuthorizationFailure as auf:
-            print("Error for {0} auth: {1}".format(username, auf.message))
+            print("Error for {0} auth: {1}".format(username, auf))
             os._exit(1)
         except Unauthorized as unauth:
             print("Error for {0} auth: {1}"
@@ -534,12 +576,21 @@ if __name__ == '__main__':
             os._exit(1)
         try:
             print("Number of servers: {0}".format(len(servers)))
+            '''
+            for server in data.server_usages:
+                s_name = server['name']
+                s = Server(s_name)
+                s.id = server['instance_id']
+                s.state = server['state']
+                s.gb = float(server['local_gb'])
+                s.vcpus = float(server['vcpus'])
+                s.ram = float(server['memory_mb']) / 1024.0
+            '''
             for server in servers:
                 s = Server(server.name)
                 s.id = server.id
                 s.status = server.status
                 flavor = nova.flavors.get(server.flavor['id'])
-                #if (s.status != 'terminated' and flavor):
                 if (flavor):
                     #pp.pprint(flavor.__dict__)
                     s.gb = float(flavor.disk)
@@ -561,17 +612,23 @@ if __name__ == '__main__':
                         s.gb_hrs = s.gb*s.hrs
                         s.vcpus_hrs = s.vcpus*s.hrs
                         s.ram_hrs = s.ram*s.hrs
-                        stop_timeframes, shelve_timeframes =\
+                        #pp.pprint(s.__dict__)
+                        (stop_timeframes,
+                         shelve_timeframes,
+                         delete_timeframes) =\
                             getStopStartTimeFrames(actions,
                                                    period_end_time=
                                                    end_time)
                         #pp.pprint(stop_timeframes)
                         #pp.pprint(shelve_timeframes)
+                        #pp.pprint(delete_timeframes)
                         if (stop_timeframes or
-                           shelve_timeframes):
+                           shelve_timeframes or
+                           delete_timeframes):
                             s.updateHoursAndVolumes(
                                 stop_timeframes,
                                 shelve_timeframes,
+                                delete_timeframes,
                                 company.stop_coeff,
                                 company.shelve_coeff)
                 s.gb_cost = s.gb_hrs*gbh
@@ -579,7 +636,6 @@ if __name__ == '__main__':
                 s.ram_cost = s.ram_hrs*ramh
                 if details:
                     print(s)
-                #pp.pprint(server)
                 company.server.append(s)
                 company.hrs += s.hrs
                 company.vcpus_hrs += s.vcpus_hrs
