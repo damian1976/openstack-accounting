@@ -2,6 +2,7 @@
 import os
 import pprint
 from novaclient import client
+from novaclient.exceptions import Forbidden
 #from novaclient import extension
 #from novaclient.v2.contrib import instance_action
 #from keystoneclient.v2_0 import client as ks
@@ -524,9 +525,15 @@ if __name__ == '__main__':
             continue
         try:
             #get tenants for given user
-            ksclient = ks.Client(username=username,
-                                 password=password,
-                                 auth_url=url)
+            opts = loading.get_plugin_loader('password')
+            loader = loading.get_plugin_loader('password')
+            auth = loader.load_from_options(auth_url=url,
+                                            username=username,
+                                            password=password,
+                                            project_id=project_id,
+                                            )
+            sess = session.Session(auth=auth)
+            ksclient = ks.Client(session=sess,)
             ksdata = ksclient.tenants.list()
             dir(ksdata)
             tenants = dict((x.name, x.id) for x in ksdata)
@@ -536,8 +543,6 @@ if __name__ == '__main__':
             project_id = tenants[project_name]
             #auth with nova
             VERSION = '2.21'
-            opts = loading.get_plugin_loader('password')
-            loader = loading.get_plugin_loader('password')
             auth = loader.load_from_options(auth_url=url,
                                             username=username,
                                             password=password,
@@ -547,10 +552,11 @@ if __name__ == '__main__':
             nova = client.Client(VERSION,
                                  session=sess,
                                  )
+            servers = nova.servers.list()
             servers_deleted = nova.servers.list(
                 search_opts={'status': 'deleted'}
                 )
-            servers = nova.servers.list()
+            pp.pprint(servers_deleted)
             servers = servers + servers_deleted
             #pp.pprint(servers)
             '''
@@ -559,6 +565,8 @@ if __name__ == '__main__':
                                   end=end_time)
             dir(data)
             '''
+        except Forbidden as fb:
+            print("There was a problem: {0}".format(fb))
         except KeyError as ke:
             print("Project {0} unavailable for given username".
                   format(ke))
