@@ -2,7 +2,7 @@
 import os
 import pprint
 from novaclient import client
-from novaclient.exceptions import Forbidden
+from novaclient.exceptions import Forbidden, NotFound
 #from novaclient import extension
 #from novaclient.v2.contrib import instance_action
 #from keystoneclient.v2_0 import client as ks
@@ -564,6 +564,16 @@ if __name__ == '__main__':
                                   start=start_time,
                                   end=end_time)
             dir(data)
+            pp.pprint(data.__dict__)
+            for server in data.server_usages:
+                s_name = server['name']
+                s = Server(s_name)
+                s.id = server['instance_id']
+                s.state = server['state']
+                s.gb = float(server['local_gb'])
+                s.vcpus = float(server['vcpus'])
+                s.ram = float(server['memory_mb']) / 1024.0
+                print(s)
             '''
         except Forbidden as fb:
             print("There was a problem: {0}".format(fb))
@@ -598,47 +608,49 @@ if __name__ == '__main__':
                 s = Server(server.name)
                 s.id = server.id
                 s.status = server.status
-                flavor = nova.flavors.get(server.flavor['id'])
-                if (flavor):
-                    #pp.pprint(flavor.__dict__)
-                    s.gb = float(flavor.disk)
-                    s.vcpus = float(flavor.vcpus)
-                    s.ram = float(flavor.ram) / 1024.0
-                    actions = nova.instance_action.list(server=s.id)
-                    actions = filterActionsByDateTime(
-                        actions,
-                        start_time=start_time,
-                        end_time=end_time)
-                    if actions:
-                        server_start = dup.parse(
-                            str(actions[0].start_time)
-                            )
-                        server_end = dup.parse(str(end_time))
-                        s.hrs = (
-                            server_end - server_start
-                            ).total_seconds() / 3600.0
-                        s.gb_hrs = s.gb*s.hrs
-                        s.vcpus_hrs = s.vcpus*s.hrs
-                        s.ram_hrs = s.ram*s.hrs
-                        #pp.pprint(s.__dict__)
-                        (stop_timeframes,
-                         shelve_timeframes,
-                         delete_timeframes) =\
-                            getStopStartTimeFrames(actions,
-                                                   period_end_time=
-                                                   end_time)
-                        #pp.pprint(stop_timeframes)
-                        #pp.pprint(shelve_timeframes)
-                        #pp.pprint(delete_timeframes)
-                        if (stop_timeframes or
-                           shelve_timeframes or
-                           delete_timeframes):
-                            s.updateHoursAndVolumes(
-                                stop_timeframes,
-                                shelve_timeframes,
-                                delete_timeframes,
-                                company.stop_coeff,
-                                company.shelve_coeff)
+                #pp.pprint(server.__dict__)
+                if (hasattr(server, 'flavor')):
+                    flavor = nova.flavors.get(server.flavor['id'])
+                    if (flavor):
+                        #pp.pprint(flavor.__dict__)
+                        s.gb = float(flavor.disk)
+                        s.vcpus = float(flavor.vcpus)
+                        s.ram = float(flavor.ram) / 1024.0
+                        actions = nova.instance_action.list(server=s.id)
+                        actions = filterActionsByDateTime(
+                            actions,
+                            start_time=start_time,
+                            end_time=end_time)
+                        if actions:
+                            server_start = dup.parse(
+                                str(actions[0].start_time)
+                                )
+                            server_end = dup.parse(str(end_time))
+                            s.hrs = (
+                                server_end - server_start
+                                ).total_seconds() / 3600.0
+                            s.gb_hrs = s.gb*s.hrs
+                            s.vcpus_hrs = s.vcpus*s.hrs
+                            s.ram_hrs = s.ram*s.hrs
+                            #pp.pprint(s.__dict__)
+                            (stop_timeframes,
+                             shelve_timeframes,
+                             delete_timeframes) =\
+                                getStopStartTimeFrames(actions,
+                                                       period_end_time=
+                                                       end_time)
+                            #pp.pprint(stop_timeframes)
+                            #pp.pprint(shelve_timeframes)
+                            #pp.pprint(delete_timeframes)
+                            if (stop_timeframes or
+                               shelve_timeframes or
+                               delete_timeframes):
+                                s.updateHoursAndVolumes(
+                                    stop_timeframes,
+                                    shelve_timeframes,
+                                    delete_timeframes,
+                                    company.stop_coeff,
+                                    company.shelve_coeff)
                 s.gb_cost = s.gb_hrs*gbh
                 s.vcpu_cost = s.vcpus_hrs*vcpuh
                 s.ram_cost = s.ram_hrs*ramh
@@ -653,6 +665,9 @@ if __name__ == '__main__':
                 company.total_cost += s.totalCost()
                 company.gb_hrs += s.gb_hrs
                 company.gb_cost += s.gb_cost
+        except NotFound as nf:
+            print("Flavor not found. Check if server flavor is set to public")
+            os._exit(1)
         except KeyError as ke:
             print("Server doesn't contain {0} attribute".
                   format(ke))
