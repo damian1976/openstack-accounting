@@ -26,16 +26,36 @@ __author__ = 'Damian Kaliszan'
 class AccountData(object):
     def __init__(self):
         self.hrs = 0.0
-        self.ram = 0.0
-        self.ram_hrs = 0.0
-        self.ram_cost = 0.0
-        self.vcpus = 0.0
-        self.vcpus_hrs = 0.0
-        self.vcpu_cost = 0.0
-        self.gb = 0.0
-        self.gb_hrs = 0.0
-        self.gb_cost = 0.0
+        self.ram = {
+            'value': 0.0,
+            'hours': 0.0,
+            'cost': 0.0,
+        }
+        self.cpu = {
+            'value': 0.0,
+            'hours': 0.0,
+            'cost': 0.0,
+        }
+        self.gb = {
+            'value': 0.0,
+            'hours': 0.0,
+            'cost': 0.0,
+        }
         self.total_cost = 0.0
+        self.coeff = {
+            "active": 0.0,
+            "shelve": 0.0,
+            "stop": 0.0,
+            "shelve_cpu": 0.0,
+            "shelve_ram": 0.0,
+            "shelve_gb": 0.0,
+            "stop_cpu": 0.0,
+            "stop_ram": 0.0,
+            "stop_gb": 0.0,
+            "active_cpu": 0.0,
+            "active_ram": 0.0,
+            "active_gb": 0.0,
+        }
 
     def __repr__(self):
         return "<AccountData>"
@@ -61,52 +81,59 @@ class Server(AccountData):
         return str.format(self.name,
                           self.id,
                           self.hrs,
-                          self.vcpus_hrs,
-                          self.vcpu_cost,
-                          self.ram_hrs,
-                          self.ram_cost,
-                          self.gb_hrs,
-                          self.gb_cost,
+                          self.cpu['hours'],
+                          self.cpu['cost'],
+                          self.ram['hours'],
+                          self.ram['cost'],
+                          self.gb['hours'],
+                          self.gb['cost'],
                           self.totalCost())
 
     def updateHoursAndVolumes(self,
                               stop_timeframes,
                               shelve_timeframes,
                               delete_timeframes,
-                              stop_coeff,
-                              shelve_coeff):
+                              coeff,
+                              ):
         if delete_timeframes:
             for hours in delete_timeframes:
                 self.hrs -= hours
-                self.gb_hrs -= self.gb*hours
-                self.vcpus_hrs -= self.vcpus*hours
-                self.ram_hrs -= self.ram*hours
-            if (self.hrs == 0.0):
-                self.vcpus_hrs = self.ram_hrs = self.gb_hrs = 0.0
+                self.gb['hours'] -= self.gb['value']*hours
+                self.cpu['hours'] -= self.cpu['value']*hours
+                self.ram['hours'] -= self.ram['value']*hours
         if stop_timeframes:
             for hours in stop_timeframes:
-                self.hrs -= hours
-                self.vcpus_hrs -=\
-                    self.vcpus*hours*(1.0 - stop_coeff)
-                self.ram_hrs -=\
-                    self.ram*hours*(1.0 - stop_coeff)
-            if (self.hrs == 0.0):
-                self.vcpus_hrs = self.ram_hrs = self.gb_hrs = 0.0
+                self.hrs -= hours*(1.0 - coeff['stop'])
+                self.cpu['hours'] -=\
+                    self.cpu['value']*hours*(1.0 - coeff['stop_cpu'])
+                self.ram['hours'] -=\
+                    self.ram['value']*hours*(1.0 - coeff['stop_ram'])
+                self.gb['hours'] -=\
+                    self.gb['value']*hours*(1.0 - coeff['stop_gb'])
         if shelve_timeframes:
             for hours in shelve_timeframes:
-                self.hrs -= hours
-                self.vcpus_hrs -=\
-                    self.vcpus*hours*(1.0 - shelve_coeff)
-                self.ram_hrs -=\
-                    self.ram*hours*(1.0 - shelve_coeff)
-            if (self.hrs == 0.0):
-                self.vcpus_hrs = self.ram_hrs = self.gb_hrs = 0.0
+                self.hrs -= hours*(1.0 - coeff['shelve'])
+                self.cpu['hours'] -=\
+                    self.cpu['value']*hours*(1.0 - coeff['shelve_cpu'])
+                self.ram['hours'] -=\
+                    self.ram['value']*hours*(1.0 - coeff['shelve_ram'])
+                self.gb['hours'] -=\
+                    self.gb['value']*hours*(1.0 - coeff['shelve_gb'])
+        if (self.hrs == 0.0):
+            self.cpu['hours'] = self.ram['hours'] = self.gb['hours'] = 0.0
+
+    def updateMetricHoursWithActiveStatus(self, coeff):
+        self.hrs *= coeff['active']
+        self.gb['hours'] *= coeff['active_gb']
+        self.cpu['hours'] *= coeff['active_cpu']
+        self.ram['hours'] *= coeff['active_ram']
 
     def totalCost(self):
         try:
-            self.total_cost = max(self.vcpu_cost,
-                                  self.ram_cost) +\
-                self.gb_cost
+            self.total_cost = max(
+                self.cpu['cost'],
+                self.ram['cost']
+                ) + self.gb['cost']
         except Exception as e:
             print("Error {0}".format(e))
             return 0.0
@@ -118,8 +145,11 @@ class Company(object):
         AccountData.__init__(self)
         self.name = name
         self.url = ''
-        self.shelve_coeff = 0.0
-        self.stop_coeff = 0.0
+        #self.shelve_coeff = 0.0
+        #self.stop_coeff = 0.0
+        self.ramh = 0.0
+        self.vcpuh = 0.0
+        self.gbh = 0.0
         self.server = []
 
     def saveCSV(self, filename, start_time, end_time, details=False):
@@ -146,22 +176,22 @@ class Company(object):
                              str(round(self.hrs, 2)).
                              replace('.', ','),
                              fieldnames[4]:
-                             str(round(self.vcpus_hrs, 2)).
+                             str(round(self.cpu['hours'], 2)).
                              replace('.', ','),
                              fieldnames[5]:
-                             str(round(self.vcpu_cost, 2)).
+                             str(round(self.cpu['cost']	, 2)).
                              replace('.', ','),
                              fieldnames[6]:
-                             str(round(self.ram_hrs, 2)).
+                             str(round(self.ram['hours']	, 2)).
                              replace('.', ','),
                              fieldnames[7]:
-                             str(round(self.ram_cost, 2)).
+                             str(round(self.ram['cost']	, 2)).
                              replace('.', ','),
                              fieldnames[8]:
-                             str(round(self.gb_hrs, 2)).
+                             str(round(self.gb['hours']	, 2)).
                              replace('.', ','),
                              fieldnames[9]:
-                             str(round(self.gb_cost, 2)).
+                             str(round(self.gb['cost']	, 2)).
                              replace('.', ','),
                              fieldnames[10]:
                              str(round(self.total_cost, 2)).
@@ -192,22 +222,22 @@ class Company(object):
                                     fieldnames[3]: str(round(server.hrs, 2)).
                                     replace('.', ','),
                                     fieldnames[4]:
-                                    str(round(server.vcpus_hrs, 2)).
+                                    str(round(server.cpu['hours'], 2)).
                                     replace('.', ','),
                                     fieldnames[5]: str(round(
-                                        server.vcpu_cost, 2)).
+                                        server.cpu['cost'], 2)).
                                     replace('.', ','),
                                     fieldnames[6]:
-                                    str(round(server.ram_hrs, 2)).
+                                    str(round(server.ram['hours']	, 2)).
                                     replace('.', ','),
                                     fieldnames[7]: str(round(
-                                        server.ram_cost, 2)).
+                                        server.ram['cost'], 2)).
                                     replace('.', ','),
                                     fieldnames[8]: str(round(
-                                        server.gb_hrs, 2)).
+                                        server.gb['hours'], 2)).
                                     replace('.', ','),
                                     fieldnames[9]: str(round(
-                                        server.gb_cost, 2)).
+                                        server.gb['cost'], 2)).
                                     replace('.', ','),
                                     fieldnames[10]: str(round(
                                         server.totalCost(), 2)).
@@ -226,6 +256,33 @@ def configSectionMap(section, config=None):
             print("Exception on {0}!".format(option))
             dict1[option] = None
     return dict1
+
+
+def filterDeletedServerByDate(server, start_time, end_time):
+    #pp.pprint(server.__dict__)
+    #print(server.__dict__['OS-SRV-USG:launched_at'])
+    #return True
+    if ((hasattr(server, 'OS-SRV-USG:terminated_at')) and
+       (hasattr(server, 'OS-SRV-USG:launched_at')) and
+       (hasattr(server, 'OS-EXT-STS:vm_state'))):
+        server_start_time = dup.parse(
+            str(server.__dict__['OS-SRV-USG:launched_at'])
+            )
+        if (server.__dict__['OS-SRV-USG:terminated_at'] is not None
+           and server.__dict__['OS-EXT-STS:vm_state'] == 'deleted'):
+            server_end_time = dup.parse(
+                str(server.__dict__['OS-SRV-USG:terminated_at'])
+                )
+        else:
+            server_end_time = end_time
+        diff1 = (start_time - server_end_time).total_seconds()
+        diff2 = (end_time - server_start_time).total_seconds()
+        if (diff1 > 0 or diff2 < 0):
+            return False
+        else:
+            return True
+    else:
+        return False
 
 
 def filterActionsByDateTime(actions, start_time=None, end_time=None):
@@ -256,11 +313,11 @@ def filterActionsByDateTime(actions, start_time=None, end_time=None):
 
 
 def getStopStartTimeFrames(actions, period_end_time):
-    states = {'stop': 'start',
-              'shelve': 'unshelve',
-              'delete': ''}
-    stop_list = list(states.keys())
-    start_list = list(states.values())
+    transitions = {'stop': 'start',
+                   'shelve': 'unshelve',
+                   'delete': ''}
+    stop_list = list(transitions.keys())
+    start_list = list(transitions.values())
     stop_action = None
     stop_timeframes = []
     shelve_timeframes = []
@@ -277,13 +334,13 @@ def getStopStartTimeFrames(actions, period_end_time):
             print("saction.message is not None %s" % saction.action)
         print("Message {0}".format(saction.message))
         '''
-        #if successfull the message is empty
+        #if successfull the message is empty/is not 'Error'
         if (saction.action in stop_list and
            stop_action is None and not saction.message):
             stop_action = saction
         if (stop_action):
             if (saction.action in start_list and
-                states[stop_action.action] == saction.action and
+                transitions[stop_action.action] == saction.action and
                stop_action is not None and not saction.message):
                 #print("{0}\t{1}".format(stop_action.start_time,
                 #      saction.start_time))
@@ -480,8 +537,44 @@ if __name__ == '__main__':
         company_section = configSectionMap('Company', config)
         company_name = company_section['name']
         company = Company(company_name)
-        company.shelve_coeff = float(company_section['shelve_coeff'])
-        company.stop_coeff = float(company_section['stop_coeff'])
+        #company.shelve_coeff = float(company_section['shelve_coeff'])
+        #company.stop_coeff = float(company_section['stop_coeff'])
+        company.coeff['active'] = float(
+            company_section['active_coeff']
+        )
+        company.coeff['shelve'] = float(
+            company_section['shelve_coeff']
+        )
+        company.coeff['stop'] = float(
+            company_section['stop_coeff']
+        )
+        company.coeff['shelve_cpu'] = float(
+            company_section['shelve_cpu_coeff']
+        )
+        company.coeff['shelve_ram'] = float(
+            company_section['shelve_ram_coeff']
+        )
+        company.coeff['shelve_gb'] = float(
+            company_section['shelve_gb_coeff']
+        )
+        company.coeff['stop_cpu'] = float(
+            company_section['stop_cpu_coeff']
+        )
+        company.coeff['stop_ram'] = float(
+            company_section['stop_ram_coeff']
+        )
+        company.coeff['stop_gb'] = float(
+            company_section['stop_gb_coeff']
+        )
+        company.coeff['active_cpu'] = float(
+            company_section['active_cpu_coeff']
+        )
+        company.coeff['active_ram'] = float(
+            company_section['active_ram_coeff']
+        )
+        company.coeff['active_gb'] = float(
+            company_section['active_gb_coeff']
+        )
         for key, value in company_section.items():
             if (key == 'url'):
                 company.url = company_section['url']
@@ -508,6 +601,7 @@ if __name__ == '__main__':
             vcpuh = company.vcpuh
             gbh = company.gbh
             ramh = company.ramh
+            coeff = company.coeff
             project_name = project['name']
             for key, value in project.items():
                 if (key == 'url'):
@@ -521,7 +615,7 @@ if __name__ == '__main__':
                 if (key == 'ramh'):
                     ramh = float(project['ramh'])
         except KeyError as err:
-            #print("Project {0} doesn't have {1} attribute".format(proj, err))
+            print("Project {0} doesn't have {1} attribute".format(proj, err))
             continue
         try:
             #get tenants for given user
@@ -530,7 +624,6 @@ if __name__ == '__main__':
             auth = loader.load_from_options(auth_url=url,
                                             username=username,
                                             password=password,
-                                            project_id=project_id,
                                             )
             sess = session.Session(auth=auth)
             ksclient = ks.Client(session=sess,)
@@ -580,7 +673,7 @@ if __name__ == '__main__':
         except KeyError as ke:
             print("Project {0} unavailable for given username".
                   format(ke))
-            os._exit(1)
+            continue
         except ValueError as ve:
             print("Error parsing projects for given username: {1}".
                   format(ve))
@@ -593,7 +686,7 @@ if __name__ == '__main__':
                   .format(username, unauth.message))
             os._exit(1)
         try:
-            print("Number of servers: {0}".format(len(servers)))
+            #print("Number of servers: {0}".format(len(servers)))
             '''
             for server in data.server_usages:
                 s_name = server['name']
@@ -605,66 +698,71 @@ if __name__ == '__main__':
                 s.ram = float(server['memory_mb']) / 1024.0
             '''
             for server in servers:
-                s = Server(server.name)
-                s.id = server.id
-                s.status = server.status
-                #pp.pprint(server.__dict__)
-                if (hasattr(server, 'flavor')):
-                    flavor = nova.flavors.get(server.flavor['id'])
-                    if (flavor):
-                        #pp.pprint(flavor.__dict__)
-                        s.gb = float(flavor.disk)
-                        s.vcpus = float(flavor.vcpus)
-                        s.ram = float(flavor.ram) / 1024.0
-                        actions = nova.instance_action.list(server=s.id)
-                        actions = filterActionsByDateTime(
-                            actions,
-                            start_time=start_time,
-                            end_time=end_time)
-                        if actions:
-                            server_start = dup.parse(
-                                str(actions[0].start_time)
-                                )
-                            server_end = dup.parse(str(end_time))
-                            s.hrs = (
-                                server_end - server_start
-                                ).total_seconds() / 3600.0
-                            s.gb_hrs = s.gb*s.hrs
-                            s.vcpus_hrs = s.vcpus*s.hrs
-                            s.ram_hrs = s.ram*s.hrs
-                            #pp.pprint(s.__dict__)
-                            (stop_timeframes,
-                             shelve_timeframes,
-                             delete_timeframes) =\
-                                getStopStartTimeFrames(actions,
-                                                       period_end_time=
-                                                       end_time)
-                            #pp.pprint(stop_timeframes)
-                            #pp.pprint(shelve_timeframes)
-                            #pp.pprint(delete_timeframes)
-                            if (stop_timeframes or
-                               shelve_timeframes or
-                               delete_timeframes):
+                if (filterDeletedServerByDate(server,
+                                              start_time=start_time,
+                                              end_time=end_time)):
+                    s = Server(server.name)
+                    s.id = server.id
+                    s.status = server.status
+                    #pp.pprint(server.__dict__)
+                    if (hasattr(server, 'flavor')):
+                        flavor = nova.flavors.get(server.flavor['id'])
+                        if (flavor):
+                            #pp.pprint(flavor.__dict__)
+                            s.gb['value'] = float(flavor.disk)
+                            s.cpu['value'] = float(flavor.vcpus)
+                            s.ram['value'] = float(flavor.ram) / 1024.0
+                            actions = nova.instance_action.list(server=s.id)
+                            actions = filterActionsByDateTime(
+                                actions,
+                                start_time=start_time,
+                                end_time=end_time)
+                            if actions:
+                                server_start = dup.parse(
+                                    str(actions[0].start_time)
+                                    )
+                                server_end = dup.parse(str(end_time))
+                                s.hrs = (
+                                    server_end - server_start
+                                    ).total_seconds() / 3600.0
+                                s.gb['hours'] = s.gb['value']*s.hrs
+                                s.cpu['hours'] = s.cpu['value']*s.hrs
+                                s.ram['hours'] = s.ram['value']*s.hrs
+                                #pp.pprint(s.__dict__)
+                                (stop_timeframes,
+                                 shelve_timeframes,
+                                 delete_timeframes) =\
+                                    getStopStartTimeFrames(actions,
+                                                           period_end_time=
+                                                           end_time)
+                                #pp.pprint(stop_timeframes)
+                                #pp.pprint(shelve_timeframes)
+                                #pp.pprint(delete_timeframes)
+                                #if (stop_timeframes or
+                                #   shelve_timeframes or
+                                #   delete_timeframes):
                                 s.updateHoursAndVolumes(
                                     stop_timeframes,
                                     shelve_timeframes,
                                     delete_timeframes,
-                                    company.stop_coeff,
-                                    company.shelve_coeff)
-                s.gb_cost = s.gb_hrs*gbh
-                s.vcpu_cost = s.vcpus_hrs*vcpuh
-                s.ram_cost = s.ram_hrs*ramh
-                if details:
-                    print(s)
-                company.server.append(s)
-                company.hrs += s.hrs
-                company.vcpus_hrs += s.vcpus_hrs
-                company.vcpu_cost += s.vcpu_cost
-                company.ram_hrs += s.ram_hrs
-                company.ram_cost += s.ram_cost
-                company.total_cost += s.totalCost()
-                company.gb_hrs += s.gb_hrs
-                company.gb_cost += s.gb_cost
+                                    coeff,
+                                )
+                    #pp.pprint(coeff)
+                    s.updateMetricHoursWithActiveStatus(coeff)
+                    s.gb['cost'] = s.gb['hours']*gbh
+                    s.cpu['cost'] = s.cpu['hours']*vcpuh
+                    s.ram['cost'] = s.ram['hours']*ramh
+                    if details:
+                        print(s)
+                    company.server.append(s)
+                    company.hrs += s.hrs
+                    company.cpu['hours'] += s.cpu['hours']
+                    company.cpu['cost'] += s.cpu['cost']
+                    company.ram['hours'] += s.ram['hours']
+                    company.ram['cost'] += s.ram['cost']
+                    company.gb['hours'] += s.gb['hours']
+                    company.gb['cost'] += s.gb['cost']
+                    company.total_cost += s.totalCost()
         except NotFound as nf:
             print("Flavor not found. Check if server flavor is set to public")
             os._exit(1)
@@ -677,14 +775,14 @@ if __name__ == '__main__':
             os._exit(1)
     print("Aggregation:")
     print("\tTotal Hours: {0:.2f}".format(company.hrs))
-    print("\tCPU Hours: {0:.2f}".format(company.vcpus_hrs))
+    print("\tCPU Hours: {0:.2f}".format(company.cpu['hours']))
     print("\tCPU Hours cost: {0:.2f}".
-          format(company.vcpu_cost))
-    print("\tRAM GB-Hours: {0:.2f}".format(company.ram_hrs))
+          format(company.cpu['cost']	))
+    print("\tRAM GB-Hours: {0:.2f}".format(company.ram['hours']	))
     print("\tRAM GB-Hours cost: {0:.2f}".
-          format(company.ram_cost))
-    print("\tDisk GB-Hours: {0:.2f}".format(company.gb_hrs))
-    print("\tDisk GB-Hours cost: {0:.2f}".format(company.gb_cost))
+          format(company.ram['cost']	))
+    print("\tDisk GB-Hours: {0:.2f}".format(company.gb['hours']	))
+    print("\tDisk GB-Hours cost: {0:.2f}".format(company.gb['cost']	))
     print("\tTotal cost: {0:.2f}".format(company.total_cost))
     if save:
         print("Saving to {0}".format(out_file))
