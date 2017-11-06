@@ -720,8 +720,8 @@ if __name__ == '__main__':
                 #print("PRZED")
                 #pp.pprint(server.__dict__)
                 if (filterServersByDatetime(server,
-                                              start_time=start_time,
-                                              end_time=end_time)):
+                                            start_time=start_time,
+                                            end_time=end_time)):
                     s = Server(server.name)
                     s.id = server.id
                     s.status = server.status
