@@ -259,7 +259,7 @@ def configSectionMap(section, config=None):
     return dict1
 
 
-def filterDeletedServerByDate(server, start_time, end_time):
+def filterServersByDatetime(server, start_time, end_time):
     #pp.pprint(server.__dict__)
     #print(server.__dict__['OS-SRV-USG:launched_at'])
     #return True
@@ -291,7 +291,7 @@ def filterDeletedServerByDate(server, start_time, end_time):
         return False
 
 
-def filterActionsByDateTime(actions, start_time=None, end_time=None):
+def filterActionsByDatetime(actions, start_time=None, end_time=None):
     start_time = start_time.replace(tzinfo=pytz.UTC)
     end_time = end_time.replace(tzinfo=pytz.UTC)
     if actions:
@@ -719,7 +719,7 @@ if __name__ == '__main__':
             for server in servers:
                 #print("PRZED")
                 #pp.pprint(server.__dict__)
-                if (filterDeletedServerByDate(server,
+                if (filterServersByDatetime(server,
                                               start_time=start_time,
                                               end_time=end_time)):
                     s = Server(server.name)
@@ -734,7 +734,7 @@ if __name__ == '__main__':
                             s.cpu['value'] = float(flavor.vcpus)
                             s.ram['value'] = float(flavor.ram) / 1024.0
                             actions = nova.instance_action.list(server=s.id)
-                            actions = filterActionsByDateTime(
+                            actions = filterActionsByDatetime(
                                 actions,
                                 start_time=start_time,
                                 end_time=end_time)
