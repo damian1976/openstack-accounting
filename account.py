@@ -19,6 +19,7 @@ import argparse
 import configparser as Config
 from keystoneclient.exceptions import AuthorizationFailure, Unauthorized
 import csv
+import pytz
 
 __author__ = 'Damian Kaliszan'
 
@@ -262,19 +263,24 @@ def filterDeletedServerByDate(server, start_time, end_time):
     #pp.pprint(server.__dict__)
     #print(server.__dict__['OS-SRV-USG:launched_at'])
     #return True
+    start_time = start_time.replace(tzinfo=pytz.UTC)
+    end_time = end_time.replace(tzinfo=pytz.UTC)
     if ((hasattr(server, 'OS-SRV-USG:terminated_at')) and
-       (hasattr(server, 'OS-SRV-USG:launched_at')) and
+       #(hasattr(server, 'OS-SRV-USG:launched_at')) and
+       (hasattr(server, 'created')) and
        (hasattr(server, 'OS-EXT-STS:vm_state'))):
         server_start_time = dup.parse(
-            str(server.__dict__['OS-SRV-USG:launched_at'])
-            )
+            #str(server.__dict__['OS-SRV-USG:launched_at'])
+            str(server.__dict__['created'])
+            ).replace(tzinfo=pytz.UTC)
         if (server.__dict__['OS-SRV-USG:terminated_at'] is not None
            and server.__dict__['OS-EXT-STS:vm_state'] == 'deleted'):
             server_end_time = dup.parse(
                 str(server.__dict__['OS-SRV-USG:terminated_at'])
-                )
+                ).replace(tzinfo=pytz.UTC)
         else:
             server_end_time = end_time
+        #start_time = start_time.replace(tzinfo=pytz.UTC)
         diff1 = (start_time - server_end_time).total_seconds()
         diff2 = (end_time - server_start_time).total_seconds()
         if (diff1 > 0 or diff2 < 0):
@@ -286,14 +292,19 @@ def filterDeletedServerByDate(server, start_time, end_time):
 
 
 def filterActionsByDateTime(actions, start_time=None, end_time=None):
+    start_time = start_time.replace(tzinfo=pytz.UTC)
+    end_time = end_time.replace(tzinfo=pytz.UTC)
     if actions:
         mydict = {'0': start_time, '1': end_time}
         for key, date in sorted(mydict.items()):
             #actions = list(reversed(actions))
             filtered_actions = actions
+            date = date.replace(tzinfo=pytz.UTC)
             #pp.pprint(filtered_actions)
             for i, item in enumerate(filtered_actions):
-                start_time = dup.parse(str(item.start_time))
+                start_time = dup.parse(
+                    str(item.start_time)
+                ).replace(tzinfo=pytz.UTC)
                 if (key == '0' and date is not None):
                     start_diff = (start_time - date).total_seconds()
                     #print(start_diff)
@@ -347,8 +358,12 @@ def getStopStartTimeFrames(actions, period_end_time):
                 #print("Odejmuje11")
                 #start_time = timeutils.parse_isotime(stop_action.start_time)
                 #end_time = timeutils.parse_isotime(saction.start_time)
-                start_time = dup.parse(str(stop_action.start_time))
-                end_time = dup.parse(str(saction.start_time))
+                start_time = dup.parse(
+                    str(stop_action.start_time)
+                ).replace(tzinfo=pytz.UTC)
+                end_time = dup.parse(
+                    str(saction.start_time)
+                ).replace(tzinfo=pytz.UTC)
                 #print("Odejmuje")
                 tdiff = (end_time - start_time).total_seconds() / 3600.0
                 #print(tdiff)
@@ -359,8 +374,12 @@ def getStopStartTimeFrames(actions, period_end_time):
                 stop_action = None
             #just in case stop action is the last action in the list
             elif (i == len(actions) - 1):
-                end_time = dup.parse(str(period_end_time))
-                start_time = dup.parse(str(stop_action.start_time))
+                end_time = dup.parse(
+                    str(period_end_time)
+                ).replace(tzinfo=pytz.UTC)
+                start_time = dup.parse(
+                    str(stop_action.start_time)
+                ).replace(tzinfo=pytz.UTC)
                 #print("Odejmuje22 {0} {1}".format(end_time, start_time))
                 #start_time = timeutils.parse_isotime(stop_action.start_time)
                 #print("Odejmuje2")
@@ -649,7 +668,7 @@ if __name__ == '__main__':
             servers_deleted = nova.servers.list(
                 search_opts={'status': 'deleted'}
                 )
-            #pp.pprint(servers_deleted)
+            #pp.pprint(servers)
             servers = servers + servers_deleted
             #pp.pprint(servers)
             '''
@@ -698,6 +717,8 @@ if __name__ == '__main__':
                 s.ram = float(server['memory_mb']) / 1024.0
             '''
             for server in servers:
+                #print("PRZED")
+                #pp.pprint(server.__dict__)
                 if (filterDeletedServerByDate(server,
                                               start_time=start_time,
                                               end_time=end_time)):
@@ -720,8 +741,10 @@ if __name__ == '__main__':
                             if actions:
                                 server_start = dup.parse(
                                     str(actions[0].start_time)
-                                    )
-                                server_end = dup.parse(str(end_time))
+                                    ).replace(tzinfo=pytz.UTC)
+                                server_end = dup.parse(
+                                    str(end_time)
+                                ).replace(tzinfo=pytz.UTC)
                                 s.hrs = (
                                     server_end - server_start
                                     ).total_seconds() / 3600.0
