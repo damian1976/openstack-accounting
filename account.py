@@ -3,10 +3,6 @@ import os
 import pprint
 from novaclient import client
 from novaclient.exceptions import Forbidden, NotFound
-#from novaclient import extension
-#from novaclient.v2.contrib import instance_action
-#from keystoneclient.v2_0 import client as ks
-#from keystoneauth1.identity import v3
 from keystoneclient.v2_0 import client as ks
 from keystoneauth1 import loading
 from keystoneauth1 import session
@@ -141,7 +137,7 @@ class Server(AccountData):
         return self.total_cost
 
 
-class Company(object):
+class Company(AccountData):
     def __init__(self, name):
         AccountData.__init__(self)
         self.name = name
