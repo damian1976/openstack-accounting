@@ -19,7 +19,7 @@ User credentials can also be provided in ENV variables as OS_USERNAME and OS_PAS
     3. export PYTHONPATH=/path/to/virtualenv/lib/python3.4/site-packages (*)
     4. source /path/to/new/virtualenv/bin/activate
     5. pip install --upgrade pip
-    6. copy app folder to virtualenv di
+    6. clone app into virtualenv dir
     7. cd app
     8. pip install -e .
     ENJOY :)
