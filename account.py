@@ -633,7 +633,7 @@ if __name__ == '__main__':
             print("Project {0} doesn't have {1} attribute".format(proj, err))
             continue
         try:
-            #get tenants for given user
+            # Get tenants for given user
             opts = loading.get_plugin_loader('password')
             loader = loading.get_plugin_loader('password')
             auth = loader.load_from_options(auth_url=url,
@@ -645,27 +645,41 @@ if __name__ == '__main__':
             ksdata = ksclient.tenants.list()
             dir(ksdata)
             tenants = dict((x.name, x.id) for x in ksdata)
-            #pp.pprint(tenants)
+            pp.pprint(tenants)
             if tenants is None:
                 raise ValueError
-            project_id = tenants[project_name]
-            #auth with nova
+            project_ids = []
+            # Get all tenants for user in case 'all' is set as project name
+            # in the config file. otherwise use just a name set
+            if (project_name == 'all'):
+                for t_name, t_id in tenants.items():
+                    project_ids.append(t_id)
+            else:
+                project_ids.append(tenants[project_name])
+            #  pp.pprint(project_ids)
+            #auth with nova and compute id min 2.21
             VERSION = '2.21'
-            auth = loader.load_from_options(auth_url=url,
-                                            username=username,
-                                            password=password,
-                                            project_id=project_id,
-                                            )
-            sess = session.Session(auth=auth)
-            nova = client.Client(VERSION,
-                                 session=sess,
-                                 )
-            servers = nova.servers.list()
-            servers_deleted = nova.servers.list(
-                search_opts={'status': 'deleted'}
-                )
-            #pp.pprint(servers)
-            servers = servers + servers_deleted
+            servers = None
+            for project_id in project_ids:
+                auth = loader.load_from_options(auth_url=url,
+                                                username=username,
+                                                password=password,
+                                                project_id=project_id,
+                                                )
+                sess = session.Session(auth=auth)
+                nova = client.Client(VERSION,
+                                     session=sess,
+                                     )
+                servers_active = nova.servers.list()
+                if (servers is None):
+                    servers = servers_active
+                else:
+                    servers += servers_active
+                print(type(servers_active))
+                servers_deleted = nova.servers.list(
+                    search_opts={'status': 'deleted'}
+                    )
+                servers += servers_deleted
             #pp.pprint(servers)
             '''
             data = nova.usage.get(tenant_id=project_id,
