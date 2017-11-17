@@ -14,8 +14,10 @@ import dateutil.parser as dup
 import argparse
 import configparser as Config
 from keystoneclient.exceptions import AuthorizationFailure, Unauthorized
-import csv
+#import csv
 import pytz
+import accountcsv
+import accountdb
 
 __author__ = 'Damian Kaliszan'
 
@@ -58,13 +60,18 @@ class AccountData(object):
         return "<AccountData>"
 
 
+# 'Server' class
+# Contains all server accounting data
 class Server(AccountData):
     def __init__(self, name):
         AccountData.__init__(self)
         self.name = name
         self.id = ''
         self.state = 'active'
+        self.project_id = ''
+        self.project_name = ''
 
+    # Returns String representation for a server object
     def __str__(self):
         str = "Server name: {0} ({1})\n" \
               "\tHours: {2:.2f}\n" \
@@ -86,6 +93,7 @@ class Server(AccountData):
                           self.gb['cost'],
                           self.totalCost())
 
+    # Updates server flavors with STOP. SHELVE statuses from config
     def updateHoursAndVolumes(self,
                               stop_timeframes,
                               shelve_timeframes,
@@ -119,12 +127,16 @@ class Server(AccountData):
         if (self.hrs == 0.0):
             self.cpu['hours'] = self.ram['hours'] = self.gb['hours'] = 0.0
 
+    # Updates server flavors with ACTIVE status coefficients from config
     def updateMetricHoursWithActiveStatus(self, coeff):
+        if (not coeff):
+            return
         self.hrs *= coeff['active']
         self.gb['hours'] *= coeff['active_gb']
         self.cpu['hours'] *= coeff['active_cpu']
         self.ram['hours'] *= coeff['active_ram']
 
+    # Returns total cost for a server
     def totalCost(self):
         try:
             self.total_cost = max(
@@ -136,109 +148,17 @@ class Server(AccountData):
             return 0.0
         return self.total_cost
 
-
+# 'Company' class 
+# Contains all company accounting data
 class Company(AccountData):
     def __init__(self, name):
         AccountData.__init__(self)
         self.name = name
         self.url = ''
-        #self.shelve_coeff = 0.0
-        #self.stop_coeff = 0.0
         self.ramh = 0.0
         self.vcpuh = 0.0
         self.gbh = 0.0
         self.server = []
-
-    def saveCSV(self, filename, start_time, end_time, details=False):
-        with open(filename, 'w') as csvfile:
-            fieldnames = ['Company name',
-                          'Start date',
-                          'End date',
-                          'Total hours',
-                          'CPU-Hours',
-                          'CPU-Hours cost',
-                          "RAM GB-Hours",
-                          "RAM GB-Hours cost",
-                          'Disk GB-Hours',
-                          'Disk GB-Hours cost',
-                          'Total cost']
-            writer = csv.DictWriter(csvfile,
-                                    fieldnames=fieldnames,
-                                    delimiter=';')
-            writer.writeheader()
-            writer.writerow({fieldnames[0]: self.name,
-                             fieldnames[1]: start_time,
-                             fieldnames[2]: end_time,
-                             fieldnames[3]:
-                             str(round(self.hrs, 2)).
-                             replace('.', ','),
-                             fieldnames[4]:
-                             str(round(self.cpu['hours'], 2)).
-                             replace('.', ','),
-                             fieldnames[5]:
-                             str(round(self.cpu['cost']	, 2)).
-                             replace('.', ','),
-                             fieldnames[6]:
-                             str(round(self.ram['hours']	, 2)).
-                             replace('.', ','),
-                             fieldnames[7]:
-                             str(round(self.ram['cost']	, 2)).
-                             replace('.', ','),
-                             fieldnames[8]:
-                             str(round(self.gb['hours']	, 2)).
-                             replace('.', ','),
-                             fieldnames[9]:
-                             str(round(self.gb['cost']	, 2)).
-                             replace('.', ','),
-                             fieldnames[10]:
-                             str(round(self.total_cost, 2)).
-                             replace('.', ',')})
-        if details:
-            with open(filename, 'a') as csvfile:
-                fieldnames = ['Server name',
-                              'Start date',
-                              'End date',
-                              'Hours',
-                              'CPU-Hours',
-                              'CPU-Hours cost',
-                              'RAM GB-Hours',
-                              'RAM GB-Hours cost',
-                              'Disk GB-Hours',
-                              'Disk GB-Hours cost',
-                              'Total cost']
-                writer = csv.DictWriter(csvfile,
-                                        fieldnames=fieldnames,
-                                        delimiter=';')
-                writer.writerow({})
-                writer.writeheader()
-                for server in self.server:
-                    name = "{0} ({1})".format(server.name, server.id)
-                    writer.writerow({fieldnames[0]: name,
-                                    fieldnames[1]: start_time,
-                                    fieldnames[2]: end_time,
-                                    fieldnames[3]: str(round(server.hrs, 2)).
-                                    replace('.', ','),
-                                    fieldnames[4]:
-                                    str(round(server.cpu['hours'], 2)).
-                                    replace('.', ','),
-                                    fieldnames[5]: str(round(
-                                        server.cpu['cost'], 2)).
-                                    replace('.', ','),
-                                    fieldnames[6]:
-                                    str(round(server.ram['hours']	, 2)).
-                                    replace('.', ','),
-                                    fieldnames[7]: str(round(
-                                        server.ram['cost'], 2)).
-                                    replace('.', ','),
-                                    fieldnames[8]: str(round(
-                                        server.gb['hours'], 2)).
-                                    replace('.', ','),
-                                    fieldnames[9]: str(round(
-                                        server.gb['cost'], 2)).
-                                    replace('.', ','),
-                                    fieldnames[10]: str(round(
-                                        server.totalCost(), 2)).
-                                    replace('.', ',')})
 
 
 def configSectionMap(section, config=None):
@@ -255,6 +175,7 @@ def configSectionMap(section, config=None):
     return dict1
 
 
+# Filters out servers by given period of time.
 def filterServersByDatetime(server, start_time, end_time):
     #pp.pprint(server.__dict__)
     #print(server.__dict__['OS-SRV-USG:launched_at'])
@@ -429,10 +350,17 @@ if __name__ == '__main__':
                         help='Output CSV file name')
 
     # Optional  argument
+    parser.add_argument('--export_db',
+                        dest='db',
+                        action='store_true',
+                        help="Enablessaving results into SQLite database")
+
+    # Optional  argument
     parser.add_argument('--details',
                         dest='feature',
                         action='store_true',
                         help="Enables accounting 'by server' feature")
+
     parser.add_argument('--no-details',
                         dest='feature',
                         action='store_false',
@@ -440,7 +368,6 @@ if __name__ == '__main__':
                         "feature (default)")
 
     # Parse args
-    #args = parser.parse_args()
     args, extra = parser.parse_known_args()
     username = ''
     password = ''
@@ -449,6 +376,7 @@ if __name__ == '__main__':
     end_time = ''
     out_file = ''
     save = False
+    saveDB = False
     details = False
     if (args.config_file):
         config = Config.ConfigParser()
@@ -523,11 +451,13 @@ if __name__ == '__main__':
     if (args.output_file):
         out_file = args.output_file
         save = True
+    if (args.db):
+        saveDB = True
+    if (args.feature):
+        details = True
     message = ('The start time cannot occur after the end time')
     if ((end_time - start_time).total_seconds() < 0):
         raise parser.error(message)
-    if (args.feature):
-        details = True
     pp = pprint.PrettyPrinter(indent=4)
     project_id = ''
     tenants = None
@@ -645,22 +575,22 @@ if __name__ == '__main__':
             ksdata = ksclient.tenants.list()
             dir(ksdata)
             tenants = dict((x.name, x.id) for x in ksdata)
-            pp.pprint(tenants)
+            #pp.pprint(tenants)
             if tenants is None:
                 raise ValueError
-            project_ids = []
+            projects = dict()
             # Get all tenants for user in case 'all' is set as project name
             # in the config file. otherwise use just a name set
             if (project_name == 'all'):
                 for t_name, t_id in tenants.items():
-                    project_ids.append(t_id)
+                    projects.update({t_id: t_name})
             else:
-                project_ids.append(tenants[project_name])
+                projects.update({tenants[project_name]: project_name})
             #  pp.pprint(project_ids)
             #auth with nova and compute id min 2.21
             VERSION = '2.21'
             servers = None
-            for project_id in project_ids:
+            for project_id, project_name in projects.items():
                 auth = loader.load_from_options(auth_url=url,
                                                 username=username,
                                                 password=password,
@@ -674,11 +604,15 @@ if __name__ == '__main__':
                 if (servers is None):
                     servers = servers_active
                 else:
+                    for s in servers_active:
+                        s._add_details({'tenant_name': project_name})
                     servers += servers_active
-                print(type(servers_active))
                 servers_deleted = nova.servers.list(
                     search_opts={'status': 'deleted'}
                     )
+                if (servers_deleted is not None):
+                    for s in servers_deleted:
+                        s._add_details({'tenant_name': project_name})
                 servers += servers_deleted
             #pp.pprint(servers)
             '''
@@ -728,13 +662,15 @@ if __name__ == '__main__':
             '''
             for server in servers:
                 #print("PRZED")
-                #pp.pprint(server.__dict__)
+                pp.pprint(server.__dict__)
                 if (filterServersByDatetime(server,
                                             start_time=start_time,
                                             end_time=end_time)):
                     s = Server(server.name)
                     s.id = server.id
                     s.status = server.status
+                    s.project_id = server.tenant_id
+                    #s.project_name = server.tenant_name
                     #pp.pprint(server.__dict__)
                     if (hasattr(server, 'flavor')):
                         flavor = nova.flavors.get(server.flavor['id'])
@@ -819,4 +755,7 @@ if __name__ == '__main__':
     print("\tTotal cost: {0:.2f}".format(company.total_cost))
     if save:
         print("Saving to {0}".format(out_file))
-        company.saveCSV(out_file, start_time, end_time, details)
+        accountcsv.saveCSV(company, out_file, start_time, end_time, details)
+    if saveDB:
+        print("Saving to database")
+        accountdb.saveDB(company, start_time, end_time)
