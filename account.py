@@ -353,7 +353,7 @@ if __name__ == '__main__':
     parser.add_argument('--export_db',
                         dest='db',
                         action='store_true',
-                        help="Enablessaving results into SQLite database")
+                        help="Enables saving results into SQLite database")
 
     # Optional  argument
     parser.add_argument('--details',
@@ -649,20 +649,8 @@ if __name__ == '__main__':
                   .format(username, unauth.message))
             os._exit(1)
         try:
-            #print("Number of servers: {0}".format(len(servers)))
-            '''
-            for server in data.server_usages:
-                s_name = server['name']
-                s = Server(s_name)
-                s.id = server['instance_id']
-                s.state = server['state']
-                s.gb = float(server['local_gb'])
-                s.vcpus = float(server['vcpus'])
-                s.ram = float(server['memory_mb']) / 1024.0
-            '''
             for server in servers:
-                #print("PRZED")
-                pp.pprint(server.__dict__)
+                #pp.pprint(server.__dict__)
                 if (filterServersByDatetime(server,
                                             start_time=start_time,
                                             end_time=end_time)):
