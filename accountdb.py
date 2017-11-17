@@ -48,5 +48,10 @@ def saveDB(company, start_time, end_time):
             INSERT INTO accounting VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ''', rows)
         db.commit()
-    except sqlite3.IntegrityError:
-        pass
+    except Exception as e:
+        # Roll back any change if something goes wrong
+        db.rollback()
+        raise e
+    finally:
+        # Close the db connection
+        db.close()
