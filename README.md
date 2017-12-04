@@ -7,6 +7,7 @@ Sample executions:
 
     1.  ./account.py -u USERNAME -p PASSWD -f config.ini --details --start 2017-09-05 --end 2017-09-20
     2.  ./account.py -u USERNAME -p PASSWD -f config.ini --no-details --start 2017-09-05
+    3.  ./account.py -u USERNAME -p PASSWD -f config.ini --no-details --start 2017-09-05 --export_db
 
 User credentials can also be provided in ENV variables as OS_USERNAME and OS_PASSWD. If so, then sample execution may look like:
 
