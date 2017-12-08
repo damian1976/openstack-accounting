@@ -26,7 +26,7 @@ class Company(AccountData):
             cursor.execute('''
                 CREATE TABLE if not exists accounting(
                     project_id TEXT NOT NULL,
-                    project_name TEXT,
+                    project_name TEXT NOT NULL,
                     server_id TEXT NOT NULL,
                     server_name TEXT NOT NULL,
                     start_date TEXT NOT NULL,
@@ -44,12 +44,12 @@ class Company(AccountData):
             rows = []
             for server in self.server:
                 row = []
-                row.append(server.project_id)
-                row.append(server.project_name)
-                row.append(server.id)
-                row.append(server.name)
-                row.append(start_time)
-                row.append(end_time)
+                row.append(str(server.project_id))
+                row.append(str(server.project_name))
+                row.append(str(server.id))
+                row.append(str(server.name))
+                row.append(str(start_time))
+                row.append(str(end_time))
                 row.append(round(server.hrs, 2))
                 row.append(round(server.cpu['hours'], 2))
                 row.append(round(server.cpu['cost'], 2))
@@ -59,11 +59,11 @@ class Company(AccountData):
                 row.append(round(server.ram['cost'], 2))
                 row.append(round(server.totalCost(), 2))
                 rows.append(row)
-                #print("Append {0}".format(row))
-                cursor.executemany('''
+                print("Append {0}".format(row))
+            cursor.executemany('''
                     INSERT INTO accounting VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ''', rows)
-                db.commit()
+            db.commit()
         except Exception as e:
             # Roll back any change if something goes wrong
             db.rollback()
