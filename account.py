@@ -19,9 +19,7 @@ from keystoneclient.exceptions \
     import AuthorizationFailure,\
     Unauthorized,\
     EmptyCatalog
-#import csv
 import pytz
-#import accountcsv
 from util.company import Company
 from util.project import Project
 from util.server import Server
@@ -481,12 +479,6 @@ def updateOSUserProjectsWithConfig(user_tenants):
                             )
                         )[0]
     except KeyError:
-        '''
-        user_all.coeff = company.coeff
-        p.gbh = user_all.gbh
-        p.ramh = user_all.ramh
-        p.vcpuh = user_all.vcpuh
-        '''
         user_all = None
     #pp.pprint(user_all)
     if (user_tenants):
@@ -796,5 +788,5 @@ if __name__ == '__main__':
         print("Saving to {0}".format(out_file))
         company.saveCSV(out_file, start_time, end_time, details)
     if saveDB:
-        print("Saving to database")
+        print("Saving to database {0} {1}".format(start_time, end_time))
         company.saveDB(start_time, end_time)
