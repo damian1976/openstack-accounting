@@ -101,8 +101,11 @@ setup(
     # have to be included in MANIFEST.in as well.
     package_data={
         'sample': ['config.ini',
-                   'accountdb.py',
-                   'accountcsv.py',
+                   'util/__init__.py',
+                   'util/company.py',
+                   'util/os_data.py',
+                   'util/project.py',
+                   'util/server.py',
                   ],
     },
 
