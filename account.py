@@ -294,7 +294,7 @@ def getOSServers(company, projects, user_tenants, username, password):
                                username=username,
                                password=password,
                                user_domain_name='default',
-                               project_domain_name='default')
+                               project_domain_name='default',)
             sess = session.Session(auth=auth)
             nova = client.Client(API_VERSION,
                                  session=sess,
@@ -389,7 +389,7 @@ def getOSServers(company, projects, user_tenants, username, password):
               .format(username, unauth.message))
         os._exit(1)
     except EmptyCatalog as cc:
-        print("Error when listing all users: {0}"
+        print("Error when listing all servers: {0}"
               .format(cc.message))
         os._exit(1)
     #pp.pprint(servers)
