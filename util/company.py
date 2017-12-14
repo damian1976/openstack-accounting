@@ -41,7 +41,7 @@ class Company(AccountData):
                     total_cost REAL NOT NULL,
                     PRIMARY KEY (project_id, server_id, start_date, end_date))
             ''')
-            rows = []
+            #rows = []
             for server in self.server:
                 row = []
                 row.append(str(server.project_id))
@@ -58,18 +58,25 @@ class Company(AccountData):
                 row.append(round(server.ram['hours'], 2))
                 row.append(round(server.ram['cost'], 2))
                 row.append(round(server.totalCost(), 2))
-                rows.append(row)
+                #rows.append(row)
                 print("Append {0}".format(row))
-            cursor.executemany('''
-                    INSERT INTO accounting VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                ''', rows)
-            db.commit()
+                try:
+                    cursor.execute('''
+                        INSERT INTO accounting
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        ''', row)
+                    db.commit()
+                except sqlite3.IntegrityError as ie:
+                    print("Error inserting data twice: {0}".format(ie))
+                    db.rollback()
+                    continue
         except Exception as e:
             # Roll back any change if something goes wrong
             db.rollback()
-            raise e
+            print("Error: {0}".forma(e.message))
         finally:
             # Close the db connection
+            cursor.close()
             db.close()
 
     def saveCSV(self, filename, start_time, end_time, details=False):
