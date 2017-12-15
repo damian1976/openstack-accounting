@@ -12,7 +12,7 @@ Sample executions:
 
 User credentials can also be provided in ENV variables as OS_USERNAME and OS_PASSWD. If so, then sample execution may look like:
 
-    ./account.py -f config.ini --details --start 2017-09-05 --end 2017-09-20
+    ./account.py -f config.ini --details --start-time 2017-09-05 --end-time 2017-09-20
 
 #### Installation steps:
     
