@@ -187,45 +187,55 @@ def readConfigFile(filename=None):
             company_section = configSectionMap('Company', config)
             company_name = company_section['name']
             comp = Company(company_name)
-            #company.shelve_coeff = float(company_section['shelve_coeff'])
-            #company.stop_coeff = float(company_section['stop_coeff'])
-            comp.coeff['active'] = float(
-                company_section['active_coeff']
-            )
-            comp.coeff['shelve'] = float(
-                company_section['shelve_coeff']
-            )
-            comp.coeff['stop'] = float(
-                company_section['stop_coeff']
-            )
-            comp.coeff['shelve_cpu'] = float(
-                company_section['shelve_cpu_coeff']
-            )
-            comp.coeff['shelve_ram'] = float(
-                company_section['shelve_ram_coeff']
-            )
-            comp.coeff['shelve_gb'] = float(
-                company_section['shelve_gb_coeff']
-            )
-            comp.coeff['stop_cpu'] = float(
-                company_section['stop_cpu_coeff']
-            )
-            comp.coeff['stop_ram'] = float(
-                company_section['stop_ram_coeff']
-            )
-            comp.coeff['stop_gb'] = float(
-                company_section['stop_gb_coeff']
-            )
-            comp.coeff['active_cpu'] = float(
-                company_section['active_cpu_coeff']
-            )
-            comp.coeff['active_ram'] = float(
-                company_section['active_ram_coeff']
-            )
-            comp.coeff['active_gb'] = float(
-                company_section['active_gb_coeff']
-            )
             for key, value in company_section.items():
+                if (key == 'active_coeff'):
+                    comp.coeff['active'] = float(
+                        company_section['active_coeff']
+                    )
+                if (key == 'shelve_coeff'):
+                    comp.coeff['shelve'] = float(
+                        company_section['shelve_coeff']
+                    )
+                if (key == 'stop_coeff'):
+                    comp.coeff['stop'] = float(
+                        company_section['stop_coeff']
+                    )
+                if (key == 'shelve_cpu_coeff'):
+                    comp.coeff['shelve_cpu'] = float(
+                        company_section['shelve_cpu_coeff']
+                    )
+                if (key == 'shelve_ram_coeff'):
+                    comp.coeff['shelve_ram'] = float(
+                        company_section['shelve_ram_coeff']
+                    )
+                if (key == 'shelve_gb_coeff'):
+                    comp.coeff['shelve_gb'] = float(
+                        company_section['shelve_gb_coeff']
+                    )
+                if (key == 'stop_cpu_coeff'):
+                    comp.coeff['stop_cpu'] = float(
+                        company_section['stop_cpu_coeff']
+                    )
+                if (key == 'stop_ram_coeff'):
+                    comp.coeff['stop_ram'] = float(
+                        company_section['stop_ram_coeff']
+                    )
+                if (key == 'stop_gb_coeff'):
+                    comp.coeff['stop_gb'] = float(
+                        company_section['stop_gb_coeff']
+                    )
+                if (key == 'active_cpu_coeff'):
+                    comp.coeff['active_cpu'] = float(
+                        company_section['active_cpu_coeff']
+                    )
+                if (key == 'active_ram_coeff'):
+                    comp.coeff['active_ram'] = float(
+                        company_section['active_ram_coeff']
+                    )
+                if (key == 'active_gb_coeff'):
+                    comp.coeff['active_gb'] = float(
+                        company_section['active_gb_coeff']
+                    )
                 if (key == 'compute_api_url'):
                     comp.compute_api_url = \
                         company_section['compute_api_url']
@@ -238,35 +248,59 @@ def readConfigFile(filename=None):
                     comp.gbh = float(company_section['gbh'])
                 if (key == 'ramh'):
                     comp.ramh = float(company_section['ramh'])
+                if (key == 'project'):
+                    # get list of all projects to calculate or 'all'
+                    tmp_list = company_section['project'].split(",")
+                    comp.project = [item.strip() for item in tmp_list]
+                    #pp.pprint(comp.project)
             conf_projects = (x for x in config.sections()
                              if x not in 'Company')
-            projects = []
-            if (not all_users_projects):
-                for proj in conf_projects:
-                    #projects
-                    try:
-                        p = configSectionMap(proj, config)
-                        project = Project(p['name'])
-                        #project.url = comp.compute_api_url
-                        project.vcpuh = comp.vcpuh
-                        project.gbh = comp.gbh
-                        project.ramh = comp.ramh
-                        project.coeff = comp.coeff
+            projects = dict()
+            if (comp.project[0].lower() != 'all'):
+                for proj in comp.project:
+                    project = Project(proj)
+                    project.vcpuh = comp.vcpuh
+                    project.gbh = comp.gbh
+                    project.ramh = comp.ramh
+                    project.coeff = comp.coeff
+                    projects[proj] = project
+
+            for proj in conf_projects:
+                # prepare list of all individually calculated projects
+                try:
+                    p = configSectionMap(proj, config)
+                    #if (p['name'] in comp.project or
+                    #   comp.project[0].lower() == 'all'):
+                    # if element from conf projects belongs to company.project
+                    # names list then update company.project with coefficients
+                    if (p['name'] in list(projects.keys())):
                         for key, value in p.items():
                             if (key == 'vcpuh'):
-                                project.vcpuh = float(p['vcpuh'])
+                                projects[p['name']].vcpuh = float(p['vcpuh'])
                             if (key == 'gbh'):
-                                project.gbh = float(p['gbh'])
+                                projects[p['name']].gbh = float(p['gbh'])
                             if (key == 'ramh'):
-                                project.ramh = float(p['ramh'])
-                        projects.append(project)
-                    except KeyError as err:
-                        print("Project {0} doesn't have {1} attribute".
-                              format(proj, err))
-                        continue
+                                projects[p['name']].ramh = float(p['ramh'])
+                    else:
+                        if (comp.project[0].lower() == 'all'):
+                            project = Project(p['name'])
+                            for key, value in p.items():
+                                if (key == 'vcpuh'):
+                                    project.vcpuh = float(p['vcpuh'])
+                                if (key == 'gbh'):
+                                    project.gbh = float(p['gbh'])
+                                if (key == 'ramh'):
+                                    project.ramh = float(p['ramh'])
+                            project.coeff = comp.coeff
+                            projects[p['name']] = project
+                except KeyError as err:
+                    print("Project {0} doesn't have {1} attribute".
+                          format(proj, err))
+                    pass
             #pp.pprint(comp.__dict__)
             #for p in projects:
             #    pp.pprint(p.__dict__)
+            '''
             if (not projects):
                 project = Project('all')
                 project.vcpuh = comp.vcpuh
@@ -274,6 +308,7 @@ def readConfigFile(filename=None):
                 project.ramh = comp.ramh
                 project.coeff = comp.coeff
                 projects.append(project)
+            '''
             return comp, projects
         except KeyError as err:
             print("{0} is not defined for 'Company' section".format(err))
@@ -287,9 +322,10 @@ def readConfigFile(filename=None):
 
 def getOSServers(company, projects, user_tenants, username, password):
     servers = []
+    projects_ids = list([x.id for x in projects.values()])
     try:
         print("Retrieving servers...")
-        if (all_users_projects):
+        if (as_admin):
             auth = v3.Password(auth_url=company.identity_api_url,
                                username=username,
                                password=password,
@@ -316,61 +352,121 @@ def getOSServers(company, projects, user_tenants, username, password):
                 )
             servers += list(servers_deleted)
             if (servers is not None):
+                if (company.project[0].lower() != 'all'):
+                    servers[:] = [x for x in servers if x.tenant_id
+                                  not in projects_ids]
+                else:
+                    servers = [x for x in servers if x.tenant_id
+                               in user_tenants.values()]
+                    #print(len(servers))
                 for s in servers:
                     try:
-                        '''
-                        for k, v in user_tenants.items():
-                            print("BB {0} {1} - {2}".format(k, v, s.tenant_id))
-                            if (v == s.tenant_id):
-                                print("ALALALALALL")
-                                key = k
-                        '''
-                        key = [k for k, v in user_tenants.items()
-                               if v == s.tenant_id
+                        key = [k for k, v in projects.items()
+                               if v.id == s.tenant_id
                                ]
-                        #print("{0} {1}".format(type(key), key[0]))
-                        s._add_details({'tenant_name': key[0]})
+                        #print("KEY {0}".format(key))
+                        tenant_name = key[0]
+                        s._add_details({'tenant_name': tenant_name})
+                        s._add_details({'coeff': projects[tenant_name].coeff})
+                        s._add_details({'gbh': projects[tenant_name].gbh})
+                        s._add_details({'ramh': projects[tenant_name].ramh})
+                        s._add_details({'vcpuh': projects[tenant_name].vcpuh})
                     except KeyError:
                         key = "Unknown"
                     except IndexError:
                         s._add_details({'tenant_name': key})
-                    s._add_details({'coeff': projects.coeff})
-                    s._add_details({'gbh': projects.gbh})
-                    s._add_details({'ramh': projects.ramh})
-                    s._add_details({'vcpuh': projects.vcpuh})
         else:
-            for project_id, project in projects.items():
-                search_opts_all = {}
-                search_opts_all_deleted = {'status': 'deleted'}
-                auth = v3.Password(auth_url=company.identity_api_url,
-                                   username=username,
-                                   password=password,
-                                   user_domain_name='default',
-                                   project_domain_name='default',
-                                   project_id=project_id
-                                   )
-                sess = session.Session(auth=auth)
-                nova = client.Client(API_VERSION,
-                                     session=sess,
-                                     )
-                servers_active = nova.servers.list(
-                    search_opts=search_opts_all
-                    )
-                if (servers is None):
-                    servers = servers_active
-                else:
-                    servers += servers_active
-                servers_deleted = nova.servers.list(
-                    search_opts=search_opts_all_deleted
-                    )
-                servers += servers_deleted
-            if (servers is not None):
-                for s in servers:
-                    s._add_details({'tenant_name': project.name})
-                    s._add_details({'coeff': project.coeff})
-                    s._add_details({'gbh': project.gbh})
-                    s._add_details({'ramh': project.ramh})
-                    s._add_details({'vcpuh': project.vcpuh})
+            #pp.pprint(projects)
+            if (company.project[0].lower() == 'all'):
+                for tenant_name, tenant_id in user_tenants.items():
+                    search_opts_all = {}
+                    search_opts_all_deleted = {'status': 'deleted'}
+                    auth = v3.Password(auth_url=company.identity_api_url,
+                                       username=username,
+                                       password=password,
+                                       user_domain_name='default',
+                                       project_domain_name='default',
+                                       project_id=tenant_id
+                                       )
+                    sess = session.Session(auth=auth)
+                    nova = client.Client(API_VERSION,
+                                         session=sess,
+                                         )
+                    servers_active = nova.servers.list(
+                        search_opts=search_opts_all
+                        )
+                    if (servers is None):
+                        servers = servers_active
+                    else:
+                        servers += servers_active
+                    servers_deleted = nova.servers.list(
+                        search_opts=search_opts_all_deleted
+                        )
+                    servers += servers_deleted
+                    if (servers is not None):
+                        if (tenant_id in projects_ids):
+                            try:
+                                project = projects[tenant_name]
+                                for s in servers:
+                                    s._add_details(
+                                        {'tenant_name': project.name}
+                                    )
+                                    s._add_details({'coeff': project.coeff})
+                                    s._add_details({'gbh': project.gbh})
+                                    s._add_details({'ramh': project.ramh})
+                                    s._add_details({'vcpuh': project.vcpuh})
+                            except KeyError:
+                                print("Unknown")
+                                for s in servers:
+                                    s._add_details({'tenant_name': 'Unknown'})
+                                    s._add_details({'coeff': '0.0'})
+                                    s._add_details({'gbh': '0.0'})
+                                    s._add_details({'ramh': '0.0'})
+                                    s._add_details({'vcpuh': '0.0'})
+                        else:
+                            for s in servers:
+                                s._add_details({'tenant_name': tenant_name})
+                                s._add_details({'coeff': company.coeff})
+                                s._add_details({'gbh': company.gbh})
+                                s._add_details({'ramh': company.ramh})
+                                s._add_details({'vcpuh': company.vcpuh})
+
+            else:
+                for name, project in projects.items():
+                    #print("pn: {0}".format(name))
+                    #print("pid: {0}".format(project.id))
+                    #search_opts_all = {'all_tenants': '1'}
+                    search_opts_all = {}
+                    search_opts_all_deleted = {'status': 'deleted'}
+                    auth = v3.Password(auth_url=company.identity_api_url,
+                                       username=username,
+                                       password=password,
+                                       user_domain_name='default',
+                                       project_domain_name='default',
+                                       project_id=project.id
+                                       )
+                    sess = session.Session(auth=auth)
+                    nova = client.Client(API_VERSION,
+                                         session=sess,
+                                         )
+                    servers_active = nova.servers.list(
+                        search_opts=search_opts_all
+                        )
+                    if (servers is None):
+                        servers = servers_active
+                    else:
+                        servers += servers_active
+                    servers_deleted = nova.servers.list(
+                        search_opts=search_opts_all_deleted
+                        )
+                    servers += servers_deleted
+                if (servers is not None):
+                    for s in servers:
+                        s._add_details({'tenant_name': name})
+                        s._add_details({'coeff': project.coeff})
+                        s._add_details({'gbh': project.gbh})
+                        s._add_details({'ramh': project.ramh})
+                        s._add_details({'vcpuh': project.vcpuh})
     except Forbidden as fb:
         print("There was a problem: {0}".format(fb))
     except KeyError as ke:
@@ -402,7 +498,8 @@ def getOSUsersProjects(company, username, password):
         os_users = dict()
         user_tenants = dict()
         print("Retrieving users...")
-        if (all_users_projects):
+        #if admin fetch all OS users
+        if (as_admin):
             auth = v3.Password(auth_url=company.identity_api_url,
                                username=username,
                                password=password,
@@ -414,6 +511,7 @@ def getOSUsersProjects(company, username, password):
             for user in ksusers:
                 #print("USERS: {0} {1}".format(user.name, user.id))
                 os_users.update({user.name: user.id})
+        #otherwise add only a single user who starts this script
         else:
             os_users.update({username: password})
         print("Done.")
@@ -422,7 +520,7 @@ def getOSUsersProjects(company, username, password):
         #print(users)
         for uname, uid in os_users.items():
         # Get tenants for given user
-            if (all_users_projects):
+            if (as_admin):
                 ksdata = ksclient.projects.list(user=uid)
             else:
                 #opts = loading.get_plugin_loader('password')
@@ -470,38 +568,31 @@ def getOSUsersProjects(company, username, password):
 
 def updateOSUserProjectsWithConfig(user_tenants):
     projects = dict()
-    user_all = None
-    try:
-        user_all = dict((0, k) for k in
-                        list(
-                            filter(
-                                lambda x: x.name == 'all', conf_projects)
-                            )
-                        )[0]
-    except KeyError:
-        user_all = None
-    #pp.pprint(user_all)
     if (user_tenants):
         # Get all tenants for user in case 'all' is set as project name
         # in the config file. otherwise use just a name set
-        if (user_all):
+        if (company.project[0].lower() == 'all'):
             for tname, tid in user_tenants.items():
-                p = Project(tname)
-                p.id = tid
-                p.coeff = company.coeff
-                p.gbh = user_all.gbh
-                p.ramh = user_all.ramh
-                p.vcpuh = user_all.vcpuh
-                projects.update({tid: p})
-        else:
-            for proj in conf_projects:
                 try:
-                    proj.coeff = company.coeff
-                    projects.update({user_tenants[proj.name]: proj})
-                except:
-                    print("Could not find a project {0}".format(proj.name))
-                    os._exit(1)
-    return projects, user_all
+                    conf_projects[tname].id = tid
+                    projects.update({tname: conf_projects[tname]})
+                except KeyError:
+                    p = Project(tname)
+                    p.id = tid
+                    p.coeff = company.coeff
+                    p.gbh = company.gbh
+                    p.ramh = company.ramh
+                    p.vcpuh = company.vcpuh
+                    projects.update({tname: p})
+        else:
+            for tname, tid in user_tenants.items():
+                try:
+                    conf_projects[tname].id = tid
+                    projects.update({tname: conf_projects[tname]})
+                except KeyError:
+                    pass
+    #return projects only we want with updated values from config
+    return projects
 
 if __name__ == '__main__':
     # Instantiate the parser
@@ -560,8 +651,8 @@ if __name__ == '__main__':
                         help="Disables accounting 'by server' "
                         "feature (default)")
 
-    parser.add_argument('--all-users-projects',
-                        dest='all_users_projects',
+    parser.add_argument('--as-admin',
+                        dest='as_admin',
                         action='store_true',
                         help="Activates accounting for all users and projects")
 
@@ -577,7 +668,7 @@ if __name__ == '__main__':
     save = False
     saveDB = False
     details = False
-    all_users_projects = False
+    as_admin = False
     users_file = ''
     if (args.config_file):
         company, conf_projects = readConfigFile(args.config_file)
@@ -663,8 +754,8 @@ if __name__ == '__main__':
         saveDB = True
     if (args.feature):
         details = True
-    if (args.all_users_projects):
-        all_users_projects = True
+    if (args.as_admin):
+        as_admin = True
         '''
         try:
             users_file = args.all_users_projects[0]
@@ -682,24 +773,26 @@ if __name__ == '__main__':
     print("Period: '{0}' - '{1}'".format(start_time, end_time))
     user_tenants = getOSUsersProjects(company, username, password)
     #pp.pprint(user_tenants)
-    projects, user_all = updateOSUserProjectsWithConfig(user_tenants)
-    if (all_users_projects):
+    projects = updateOSUserProjectsWithConfig(user_tenants)
+    #pp.pprint(user_tenants)
+    #pp.pprint(projects)
+    if (as_admin):
         servers, nova = getOSServers(company,
-                                     user_all if user_all else company,
+                                     projects,
                                      user_tenants,
-                                     username, password
+                                     username,
+                                     password
                                      )
     else:
         servers, nova = getOSServers(company,
                                      projects,
-                                     None,
+                                     user_tenants,
                                      username,
                                      password
                                      )
     try:
         print("Calculating...")
-        for server in servers:
-            #pp.pprint(server.__dict__)
+        for server in servers:            
             if (filterServersByDatetime(server,
                                         start_time=start_time,
                                         end_time=end_time)):
@@ -764,7 +857,7 @@ if __name__ == '__main__':
                 company.gb['cost'] += s.gb['cost']
                 company.total_cost += s.totalCost()
     except NotFound as nf:
-        print("Flavor not found. Check if server flavor is set to public")
+        print("Flavour not found. Check if server flavor is set to public")
         os._exit(1)
     except KeyError as ke:
         print("Server doesn't contain {0} attribute".

@@ -15,4 +15,5 @@ class Project(AccountData):
     def __repr__(self):
         return self.name + "," + str(self.ramh)\
             + "," + str(self.vcpuh)\
-            + "," + str(self.gbh)
+            + "," + str(self.gbh)\
+            + "," + str(self.coeff)

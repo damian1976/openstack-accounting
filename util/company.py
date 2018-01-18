@@ -14,6 +14,9 @@ class Company(AccountData):
         self.ramh = 0.0
         self.vcpuh = 0.0
         self.gbh = 0.0
+        # stores project names to be computed or 'all'
+        self.project = []
+        # stores server objects to be computed
         self.server = []
 
     def __repr__(self):
