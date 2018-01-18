@@ -8,7 +8,7 @@ Sample executions:
     1.  ./account.py -u USERNAME -p PASSWD -f config.ini --details --start-time 2017-09-05 --end-time 2017-09-20
     2.  ./account.py -u USERNAME -p PASSWD -f config.ini --no-details --start-time 2017-09-05
     3.  ./account.py -u USERNAME -p PASSWD -f config.ini --no-details --start-time 2017-09-05 --export-db
-    4.  ./account.py -u USERNAME -p PASSWD -f config.ini --details --start-time 2017-09-05 --end-time 2017-09-30 --all-users-projects
+    4.  ./account.py -u USERNAME -p PASSWD -f config.ini --details --start-time 2018-09-05 --end-time 2017-09-30 --as-admin
 
 User credentials can also be provided in ENV variables as OS_USERNAME and OS_PASSWD. If so, then sample execution may look like:
 
