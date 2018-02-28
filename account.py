@@ -138,18 +138,12 @@ def getStopStartTimeFrames(actions, period_end_time):
             if (saction.action in start_list and
                 transitions[stop_action.action] == saction.action and
                stop_action is not None and not saction.message):
-                #print("{0}\t{1}".format(stop_action.start_time,
-                #      saction.start_time))
-                #print("Odejmuje11")
-                #start_time = timeutils.parse_isotime(stop_action.start_time)
-                #end_time = timeutils.parse_isotime(saction.start_time)
                 start_time = dup.parse(
                     str(stop_action.start_time)
                 ).replace(tzinfo=pytz.UTC)
                 end_time = dup.parse(
                     str(saction.start_time)
                 ).replace(tzinfo=pytz.UTC)
-                #print("Odejmuje")
                 tdiff = (end_time - start_time).total_seconds() / 3600.0
                 #print(tdiff)
                 if (saction.action == 'start'):
@@ -335,14 +329,15 @@ def getOSServers(company, projects, user_tenants, username, password):
             nova = client.Client(API_VERSION,
                                  session=sess,
                                  )
-            search_opts_all = {'all_tenants': '1'}
+            search_opts_all = {'all_tenants': '1'
+                               }
             search_opts_all_deleted = {'all_tenants': '1',
                                        'status': 'deleted'
                                        }
             servers_active = nova.servers.list(
                 search_opts=search_opts_all
                 )
-            # in case ListWithMEta error occurs
+            # in case ListWithMeta error occurs
             if (servers is None):
                 servers = list(servers_active)
             else:
@@ -350,22 +345,25 @@ def getOSServers(company, projects, user_tenants, username, password):
             servers_deleted = nova.servers.list(
                 search_opts=search_opts_all_deleted
                 )
-            servers += list(servers_deleted)
+            if (servers_deleted is not None):
+                servers += list(servers_deleted)
             if (servers is not None):
                 if (company.project[0].lower() != 'all'):
-                    servers[:] = [x for x in servers if x.tenant_id
-                                  not in projects_ids]
+                    servers = [x for x in servers if x.tenant_id
+                               in projects_ids]
+                    #servers = filter_servers(servers, projects_ids)
                 else:
                     servers = [x for x in servers if x.tenant_id
                                in user_tenants.values()]
-                    #print(len(servers))
                 for s in servers:
                     try:
+                        #for k, v in projects.items():
+                        #    print("v={0} s={1}".format(v.id, s.tenant_id))
                         key = [k for k, v in projects.items()
                                if v.id == s.tenant_id
                                ]
-                        #print("KEY {0}".format(key))
                         tenant_name = key[0]
+                        #print("TENANT NAME: {0}".format(tenant_name))
                         s._add_details({'tenant_name': tenant_name})
                         s._add_details({'coeff': projects[tenant_name].coeff})
                         s._add_details({'gbh': projects[tenant_name].gbh})
@@ -416,7 +414,6 @@ def getOSServers(company, projects, user_tenants, username, password):
                                     s._add_details({'ramh': project.ramh})
                                     s._add_details({'vcpuh': project.vcpuh})
                             except KeyError:
-                                print("Unknown")
                                 for s in servers:
                                     s._add_details({'tenant_name': 'Unknown'})
                                     s._add_details({'coeff': '0.0'})
@@ -538,9 +535,9 @@ def getOSUsersProjects(company, username, password):
             dir(ksdata)
             utenants = dict((x.name, x.id) for x in ksdata)
             user_tenants.update(utenants)
-            #pp.pprint(user_tenants)
-            if user_tenants is None:
-                raise ValueError
+        #pp.pprint(user_tenants)
+        if user_tenants is None:
+            raise ValueError
     except Forbidden as fb:
         print("There was a problem: {0}".format(fb))
     except KeyError as ke:
@@ -792,7 +789,8 @@ if __name__ == '__main__':
                                      )
     try:
         print("Calculating...")
-        for server in servers:            
+        for server in servers:
+            #pp.pprint(server.__dict__)
             if (filterServersByDatetime(server,
                                         start_time=start_time,
                                         end_time=end_time)):
