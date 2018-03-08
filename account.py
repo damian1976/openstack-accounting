@@ -246,7 +246,7 @@ def readConfigFile(filename=None):
                     # get list of all projects to calculate or 'all'
                     tmp_list = company_section['project'].split(",")
                     comp.project = [item.strip() for item in tmp_list]
-                    #pp.pprint(comp.project)
+                    pp.pprint(comp.project)
             conf_projects = (x for x in config.sections()
                              if x not in 'Company')
             projects = dict()
@@ -764,7 +764,7 @@ if __name__ == '__main__':
     if ((end_time - start_time).total_seconds() < 0):
         raise parser.error(message)
     time_delta = (end_time - start_time).total_seconds() / 3600.0
-    if (not company or not conf_projects):
+    if (not company or (not conf_projects and company.project[0].lower() != 'all')):
         os._exit(1)
     print("Company: '{0}':".format(company.name))
     print("Period: '{0}' - '{1}'".format(start_time, end_time))
@@ -773,20 +773,12 @@ if __name__ == '__main__':
     projects = updateOSUserProjectsWithConfig(user_tenants)
     #pp.pprint(user_tenants)
     #pp.pprint(projects)
-    if (as_admin):
-        servers, nova = getOSServers(company,
-                                     projects,
-                                     user_tenants,
-                                     username,
-                                     password
-                                     )
-    else:
-        servers, nova = getOSServers(company,
-                                     projects,
-                                     user_tenants,
-                                     username,
-                                     password
-                                     )
+    servers, nova = getOSServers(company,
+                                 projects,
+                                 user_tenants,
+                                 username,
+                                 password
+                                 )
     try:
         print("Calculating...")
         for server in servers:
