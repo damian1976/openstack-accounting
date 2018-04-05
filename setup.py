@@ -86,6 +86,7 @@ setup(
                       'python-dateutil==2.6.1',
                       'python-keystoneclient==3.13.0',
                       'python-novaclient==9.1.0',
+                      'python-glanceclient==2.9.1',
                       'pytz==2017.2',
                       'requests==2.18.4',
                       'rfc3986==1.1.0',

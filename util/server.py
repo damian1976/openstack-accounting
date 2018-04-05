@@ -30,8 +30,8 @@ class Server(AccountData):
                           self.cpu['cost'],
                           self.ram['hours'],
                           self.ram['cost'],
-                          self.gb['hours'],
-                          self.gb['cost'],
+                          self.disk['hours'],
+                          self.disk['cost'],
                           self.totalCost())
 
     # Updates server flavors with STOP. SHELVE statuses from config
@@ -44,7 +44,7 @@ class Server(AccountData):
         if delete_timeframes:
             for hours in delete_timeframes:
                 self.hrs -= hours
-                self.gb['hours'] -= self.gb['value']*hours
+                self.disk['hours'] -= self.disk['value']*hours
                 self.cpu['hours'] -= self.cpu['value']*hours
                 self.ram['hours'] -= self.ram['value']*hours
         if stop_timeframes:
@@ -54,8 +54,8 @@ class Server(AccountData):
                     self.cpu['value']*hours*(1.0 - coeff['stop_cpu'])
                 self.ram['hours'] -=\
                     self.ram['value']*hours*(1.0 - coeff['stop_ram'])
-                self.gb['hours'] -=\
-                    self.gb['value']*hours*(1.0 - coeff['stop_gb'])
+                self.disk['hours'] -=\
+                    self.disk['value']*hours*(1.0 - coeff['stop_disk'])
         if shelve_timeframes:
             for hours in shelve_timeframes:
                 self.hrs -= hours*(1.0 - coeff['shelve'])
@@ -63,17 +63,17 @@ class Server(AccountData):
                     self.cpu['value']*hours*(1.0 - coeff['shelve_cpu'])
                 self.ram['hours'] -=\
                     self.ram['value']*hours*(1.0 - coeff['shelve_ram'])
-                self.gb['hours'] -=\
-                    self.gb['value']*hours*(1.0 - coeff['shelve_gb'])
+                self.disk['hours'] -=\
+                    self.disk['value']*hours*(1.0 - coeff['shelve_disk'])
         if (self.hrs == 0.0):
-            self.cpu['hours'] = self.ram['hours'] = self.gb['hours'] = 0.0
+            self.cpu['hours'] = self.ram['hours'] = self.disk['hours'] = 0.0
 
     # Updates server flavors with ACTIVE status coefficients from config
     def updateMetricHoursWithActiveStatus(self, coeff):
         if (not coeff):
             return
         self.hrs *= coeff['active']
-        self.gb['hours'] *= coeff['active_gb']
+        self.disk['hours'] *= coeff['active_disk']
         self.cpu['hours'] *= coeff['active_cpu']
         self.ram['hours'] *= coeff['active_ram']
 
@@ -83,7 +83,7 @@ class Server(AccountData):
             self.total_cost = max(
                 self.cpu['cost'],
                 self.ram['cost']
-                ) + self.gb['cost']
+                ) + self.disk['cost']
         except Exception as e:
             print("Error {0}".format(e))
             return 0.0

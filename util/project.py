@@ -10,12 +10,14 @@ class Project(AccountData):
         self.name = name
         self.ramh = 0.0
         self.vcpuh = 0.0
-        self.gbh = 0.0
+        self.diskh = {
+            'standard': '0.0',
+        }
 
     def __repr__(self):
         return self.id\
             + "," + self.name\
             + "," + str(self.ramh)\
             + "," + str(self.vcpuh)\
-            + "," + str(self.gbh)\
+            + "," + str(self.diskh)\
             + "," + str(self.coeff)
