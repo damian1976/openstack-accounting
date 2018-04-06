@@ -9,7 +9,7 @@ Sample executions:
     2.  ./account.py -u USERNAME -p PASSWD -f config.ini --no-details --start-time 2017-09-05 -o output.csv
     3.  ./account.py -u USERNAME -p PASSWD -f config.ini --no-details --start-time 2017-09-05 --export-db
     4.  ./account.py -u USERNAME -p PASSWD -f config.ini --details --start-time 2018-09-05 --end-time 2017-09-30 --as-admin
-    5. ./account.py -u USERNAME -p PASSWD -f config.ini --details --start-time 2018-09-05 --end-time 2017-09-30 --as-admin --volumes --images --details -o output.csv --export-db
+    5.  ./account.py -u USERNAME -p PASSWD -f config.ini --details --start-time 2018-09-05 --end-time 2017-09-30 --as-admin --volumes --images --details -o output.csv --export-db
 
 User credentials can also be provided in ENV variables as OS_USERNAME and OS_PASSWD. If so, then sample execution may look like:
 
