@@ -89,7 +89,7 @@ setup(
                       'python-cinderclient==3.5.0',
                       'python-glanceclient==2.9.1',
                       'pytz==2017.2',
-                      'requests==2.18.4',
+                      'requests==2.20.0',
                       'rfc3986==1.1.0',
                       'simplejson==3.11.1',
                       'six==1.11.0',
