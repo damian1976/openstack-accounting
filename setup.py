@@ -68,7 +68,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=['Babel==2.5.1',
-                      'PyYAML==3.12',
+                      'PyYAML==5.1',
                       'argparse==1.4.0',
                       'certifi==2017.7.27.1',
                       'configparser==3.5.0',
