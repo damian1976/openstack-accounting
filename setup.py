@@ -15,7 +15,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='acct',
+    name='opac',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
@@ -29,8 +29,8 @@ setup(
     url='https://github.com/damian1976/openstack-accounting',
 
     # Author details
-    author='The Python Packaging Authority',
-    author_email='damian@man.poznan.pl',
+    author='Damian Kaliszan (PSNC)',
+    author_email='damian.kaliszan@man.poznan.pl',
 
     # Choose your license
     license='MIT',
@@ -54,6 +54,7 @@ setup(
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4.3',
+        'Programming Language :: Python :: 3.7.3',
     ],
 
     # What does your project relate to?
@@ -67,35 +68,37 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['Babel==2.5.1',
-                      'PyYAML==3.12',
-                      'argparse==1.4.0',
-                      'certifi==2017.7.27.1',
-                      'configparser==3.5.0',
-                      'idna==2.6',
-                      'iso8601==0.1.12',
-                      'keystoneauth1==3.2.0',
+    install_requires=['Babel>2.5.1',
+                      'PyYAML<=3.12',
+                      'argparse>=1.4.0',
+                      'certifi>2017.7.27.1',
+                      'configparser>=3.5.0',
+                      #'idna=2.6',
+                      #'iso8601==0.1.12',
+                      'keystoneauth1>3.2.0',
                       'msgpack-python==0.4.8',
-                      'netaddr==0.7.19',
-                      'oslo.config==4.13.0',
-                      'oslo.i18n==3.18.0',
-                      'oslo.serialization==2.21.0',
-                      'oslo.utils==3.30.0',
-                      'pbr==3.1.1',
-                      'pyparsing==2.2.0',
-                      'python-dateutil==2.6.1',
-                      'python-keystoneclient==3.13.0',
-                      'python-novaclient==9.1.0',
-                      'python-cinderclient==3.5.0',
-                      'python-glanceclient==2.9.1',
-                      'pytz==2017.2',
-                      'requests==2.18.4',
-                      'rfc3986==1.1.0',
+                      #'netaddr==0.7.19',
+                      'oslo.config>4.13.0',
+                      #'oslo.i18n==3.18.0',
+                      #'oslo.serialization==2.21.0',
+                      'oslo.utils>=3.30.0',
+                      'pbr>3.1.1',
+                      'pymongo>3.10',
+                      'pymsql>0.9',
+                      'pyparsing>2.2.0',
+                      'python-dateutil>=2.6.1',
+                      'python-keystoneclient>=3.13.0',
+                      'python-novaclient>9.1.0',
+                      'python-cinderclient>3.5.0',
+                      'python-glanceclient>2.9.1',
+                      'pytz>2017.2',
+                      'requests>2.18.4',
+                      #'rfc3986==1.1.0',
                       'simplejson==3.11.1',
-                      'six==1.11.0',
+                      #'six==1.11.0',
                       'urllib3==1.22',
-                      'wheel==0.24.0',
-                      'wrapt==1.10.11',
+                      #'wheel==0.24.0',
+                      #'wrapt==1.10.11',
                     ],
 
     # If there are data files included in your packages that need to be
@@ -122,7 +125,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'acct=acct:main',
+            'opac=account_main:main',
         ],
     },
 )
