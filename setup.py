@@ -84,7 +84,7 @@ setup(
                       'oslo.utils>=3.30.0',
                       'pbr>3.1.1',
                       'pymongo>3.10',
-                      'pymsql>0.9',
+                      'PyMySQL>0.9',
                       'pyparsing>2.2.0',
                       'python-dateutil>=2.6.1',
                       'python-keystoneclient>=3.13.0',
