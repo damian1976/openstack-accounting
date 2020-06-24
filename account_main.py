@@ -78,6 +78,7 @@ def parse_args():
 
     # Optional  argument
     parser.add_argument('-o', '--export-csv',
+                        dest='csv',
                         nargs='?',
                         help='Output CSV file name')
 
@@ -428,8 +429,8 @@ def main():
         if (end_time is ''):
             raise parser.error(message)
 
-    if (args.output_file):
-        out_file = args.output_file
+    if (args.csv):
+        out_file = args.csv
         save = True
     if (args.mysql):
         mysql = True
